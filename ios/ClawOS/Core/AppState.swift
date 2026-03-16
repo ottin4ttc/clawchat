@@ -31,6 +31,7 @@ final class AppState {
             UserDefaults.standard.set(selectedVisualThemeID.rawValue, forKey: Self.themeKey)
         }
     }
+    var colorScheme: ColorScheme = .light
     var showPairing = false
 
     let clawChatManager = ClawChatManager()
@@ -51,7 +52,7 @@ final class AppState {
     }
 
     var currentVisualTheme: AppVisualTheme {
-        AppVisualTheme.theme(for: selectedVisualThemeID)
+        AppVisualTheme.theme(for: selectedVisualThemeID, colorScheme: colorScheme)
     }
 
     var currentGateway: Gateway? {

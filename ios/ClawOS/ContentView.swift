@@ -2,8 +2,13 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var systemColorScheme
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var selectedTab = 0
+
+    private var effectiveColorScheme: ColorScheme {
+        isDarkMode ? .dark : systemColorScheme
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -27,6 +32,9 @@ struct ContentView: View {
         }
         .tint(appState.currentVisualTheme.accent)
         .preferredColorScheme(isDarkMode ? .dark : nil)
+        .onChange(of: effectiveColorScheme, initial: true) { _, newScheme in
+            appState.colorScheme = newScheme
+        }
     }
 }
 

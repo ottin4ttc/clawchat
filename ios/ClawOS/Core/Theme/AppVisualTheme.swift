@@ -39,33 +39,66 @@ struct AppVisualTheme {
     let logoTint: Color
     let themeLogoAssetName: String?
 
-    static func theme(for id: AppVisualThemeID) -> AppVisualTheme {
+    static func theme(for id: AppVisualThemeID, colorScheme: ColorScheme = .light) -> AppVisualTheme {
+        let isDark = colorScheme == .dark
         switch id {
         case .neutral:
-            AppVisualTheme(
+            return AppVisualTheme(
                 id: .neutral,
                 displayName: "默认",
                 accent: Color(.label),
                 pageGradientTop: Color(.systemBackground),
                 pageGradientBottom: Color(.systemGray6),
-                pageGlow: Color.white,
+                pageGlow: isDark ? Color.white.opacity(0.06) : Color.white,
                 ambientAssetName: nil,
                 ambientOpacity: 0,
                 bannerAssetName: nil,
                 bannerGradient: [Color(.systemGray3), Color(.systemGray5), Color(.systemGray6)],
-                tabBarFill: Color.white.opacity(0.9),
+                tabBarFill: isDark ? Color.black.opacity(0.85) : Color.white.opacity(0.9),
                 softFill: Color(.systemGray6),
                 softStroke: Color(.systemGray5),
-                rowFill: Color.white.opacity(0.72),
+                rowFill: isDark ? Color.white.opacity(0.08) : Color.white.opacity(0.72),
                 rowStroke: Color(.systemGray5).opacity(0.65),
-                cardTint: Color.white.opacity(0.06),
-                cardStroke: Color.white.opacity(0.4),
+                cardTint: isDark ? Color.white.opacity(0.08) : Color.white.opacity(0.06),
+                cardStroke: isDark ? Color.white.opacity(0.15) : Color.white.opacity(0.4),
                 logoTint: Color(.systemGray3),
                 themeLogoAssetName: nil
             )
 
         case .eva00:
-            AppVisualTheme(
+            if isDark {
+                return AppVisualTheme(
+                    id: .eva00,
+                    displayName: "零号机",
+                    // 主题色：高亮霓虹蓝，用于关键操作和气泡
+                    accent: Color(red: 0.45, green: 0.75, blue: 1.0),
+                    // 信息层背景：极深的灰蓝色，保证文字对比度
+                    pageGradientTop: Color(white: 0.08),
+                    pageGradientBottom: Color(white: 0.02),
+                    // 主题光晕：蓝色微光
+                    pageGlow: Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.15),
+                    ambientAssetName: "theme_eva00_ambient",
+                    ambientOpacity: 0.4, // 调高透明度以展示霓虹线条
+                    bannerAssetName: "theme_eva00_banner",
+                    bannerGradient: [
+                        Color(white: 0.15),
+                        Color(white: 0.10),
+                        Color(white: 0.05),
+                    ],
+                    // 信息层卡片：中性深灰，带微弱透明度
+                    tabBarFill: Color(white: 0.1).opacity(0.9),
+                    softFill: Color.white.opacity(0.08),
+                    softStroke: Color.white.opacity(0.15),
+                    rowFill: Color.white.opacity(0.05),
+                    rowStroke: Color.white.opacity(0.10),
+                    cardTint: Color.white.opacity(0.05),
+                    cardStroke: Color.white.opacity(0.12),
+                    // Logo 颜色：蓝色半透明
+                    logoTint: Color(red: 0.45, green: 0.75, blue: 1.0).opacity(0.6),
+                    themeLogoAssetName: "theme_eva00_logo"
+                )
+            }
+            return AppVisualTheme(
                 id: .eva00,
                 displayName: "零号机",
                 accent: Color(red: 0.63, green: 0.76, blue: 0.88),
@@ -92,7 +125,38 @@ struct AppVisualTheme {
             )
 
         case .eva01:
-            AppVisualTheme(
+            if isDark {
+                return AppVisualTheme(
+                    id: .eva01,
+                    displayName: "初号机",
+                    // 主题色：高亮霓虹紫
+                    accent: Color(red: 0.75, green: 0.45, blue: 1.0),
+                    // 信息层背景：极深的灰紫色
+                    pageGradientTop: Color(white: 0.08),
+                    pageGradientBottom: Color(white: 0.02),
+                    // 主题光晕：紫色微光
+                    pageGlow: Color(red: 0.5, green: 0.2, blue: 0.8).opacity(0.15),
+                    ambientAssetName: "theme_eva01_ambient",
+                    ambientOpacity: 0.4,
+                    bannerAssetName: "theme_eva01_banner",
+                    bannerGradient: [
+                        Color(white: 0.15),
+                        Color(white: 0.10),
+                        Color(white: 0.05),
+                    ],
+                    // 信息层卡片：中性深灰
+                    tabBarFill: Color(white: 0.1).opacity(0.9),
+                    softFill: Color.white.opacity(0.08),
+                    softStroke: Color.white.opacity(0.15),
+                    rowFill: Color.white.opacity(0.05),
+                    rowStroke: Color.white.opacity(0.10),
+                    cardTint: Color.white.opacity(0.05),
+                    cardStroke: Color.white.opacity(0.12),
+                    logoTint: Color(red: 0.75, green: 0.45, blue: 1.0).opacity(0.6),
+                    themeLogoAssetName: "theme_eva01_logo"
+                )
+            }
+            return AppVisualTheme(
                 id: .eva01,
                 displayName: "初号机",
                 accent: Color(red: 0.56, green: 0.27, blue: 0.78),
@@ -119,7 +183,38 @@ struct AppVisualTheme {
             )
 
         case .eva02:
-            AppVisualTheme(
+            if isDark {
+                return AppVisualTheme(
+                    id: .eva02,
+                    displayName: "贰号机",
+                    // 主题色：高亮霓虹红
+                    accent: Color(red: 1.0, green: 0.45, blue: 0.4),
+                    // 信息层背景：极深的灰红色
+                    pageGradientTop: Color(white: 0.08),
+                    pageGradientBottom: Color(white: 0.02),
+                    // 主题光晕：红色微光
+                    pageGlow: Color(red: 0.8, green: 0.2, blue: 0.1).opacity(0.15),
+                    ambientAssetName: "theme_eva02_ambient",
+                    ambientOpacity: 0.4,
+                    bannerAssetName: "theme_eva02_banner",
+                    bannerGradient: [
+                        Color(white: 0.15),
+                        Color(white: 0.10),
+                        Color(white: 0.05),
+                    ],
+                    // 信息层卡片：中性深灰
+                    tabBarFill: Color(white: 0.1).opacity(0.9),
+                    softFill: Color.white.opacity(0.08),
+                    softStroke: Color.white.opacity(0.15),
+                    rowFill: Color.white.opacity(0.05),
+                    rowStroke: Color.white.opacity(0.10),
+                    cardTint: Color.white.opacity(0.05),
+                    cardStroke: Color.white.opacity(0.12),
+                    logoTint: Color(red: 1.0, green: 0.45, blue: 0.4).opacity(0.6),
+                    themeLogoAssetName: "theme_eva02_logo"
+                )
+            }
+            return AppVisualTheme(
                 id: .eva02,
                 displayName: "贰号机",
                 accent: Color(red: 0.88, green: 0.28, blue: 0.22),

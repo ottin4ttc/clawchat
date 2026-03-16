@@ -147,7 +147,7 @@ struct DashboardView: View {
                             LinearGradient(
                                 colors: [
                                     currentTheme.softFill.opacity(0.95),
-                                    Color.white.opacity(0.68),
+                                    Color(.systemBackground).opacity(0.68),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing

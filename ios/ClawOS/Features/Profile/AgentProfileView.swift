@@ -87,7 +87,7 @@ struct AgentProfileView: View {
                         .resizable()
                         .scaledToFill()
                         .opacity(0.34)
-                        .overlay(Color.white.opacity(0.12))
+                        .overlay(Color(.systemBackground).opacity(0.12))
                 }
             }
             .frame(width: geo.size.width, height: height)

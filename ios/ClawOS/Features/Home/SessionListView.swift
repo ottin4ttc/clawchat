@@ -5,7 +5,6 @@ struct SessionListView: View {
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     var isSidebarDragging = false
-    var onMenuTap: () -> Void = {}
 
     private var filteredSessions: [Session] {
         let visibleAgentIds = Set(appState.currentGatewayAgents.map(\.id))
@@ -36,7 +35,6 @@ struct SessionListView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            searchBar
             sessionList
         }
         .onTapGesture {
@@ -55,24 +53,29 @@ struct SessionListView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Button(action: onMenuTap) {
-                Image("clawos_svg_logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 22, height: 22)
-                    .frame(width: 36, height: 36)
-                    .contentShape(Circle())
+        HStack(spacing: 12) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("搜索会话", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
-            .glassEffect(.regular, in: .circle)
-
-            Spacer()
-
-            Text("Chat")
-                .font(.headline)
-                .fontWeight(.bold)
-
-            Spacer()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            .cornerRadius(18)
+            .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
 
             Button {
                 _ = appState.startNewSession()
@@ -86,37 +89,8 @@ struct SessionListView: View {
             .glassEffect(.regular, in: .circle)
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
-        .padding(.top, 2)
-        .padding(.bottom, 10)
-    }
-
-    // MARK: - Search Bar
-
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            TextField("搜索会话", text: $searchText)
-                .textFieldStyle(.plain)
-                .focused($isSearchFocused)
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color(.systemGray6))
-        .cornerRadius(20)
-        .padding(.horizontal, AppTheme.Spacing.lg)
+        .padding(.top, 8)
         .padding(.bottom, 12)
-        .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
     }
 
     // MARK: - List
@@ -168,7 +142,7 @@ struct SessionListView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 120)
+        .padding(.top, UIScreen.main.bounds.height * 0.3)
     }
 }
 

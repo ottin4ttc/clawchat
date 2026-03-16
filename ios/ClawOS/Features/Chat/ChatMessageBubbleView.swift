@@ -212,7 +212,7 @@ struct MessageBubbleView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color(.systemBackground).opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var toolEventsBlock: some View {
@@ -228,7 +228,7 @@ struct MessageBubbleView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Color(.systemBackground).opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func attachmentList(isUserBubble: Bool) -> some View {
@@ -252,7 +252,7 @@ struct MessageBubbleView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(isUserBubble ? Color.white.opacity(0.18) : Color.white.opacity(0.6))
+                        .fill(isUserBubble ? Color.white.opacity(0.18) : Color(.systemBackground).opacity(0.6))
                 )
             }
         }

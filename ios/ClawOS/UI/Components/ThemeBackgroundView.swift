@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ThemeBackgroundView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let theme = appState.currentVisualTheme
+        let isDark = colorScheme == .dark
 
         ZStack {
             LinearGradient(
@@ -31,9 +33,9 @@ struct ThemeBackgroundView: View {
 
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.16),
+                    (isDark ? Color.white.opacity(0.04) : Color.white.opacity(0.16)),
                     Color.clear,
-                    Color.white.opacity(0.06),
+                    (isDark ? Color.white.opacity(0.02) : Color.white.opacity(0.06)),
                 ],
                 startPoint: .top,
                 endPoint: .bottom

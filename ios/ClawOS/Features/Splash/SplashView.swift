@@ -21,13 +21,21 @@ struct SplashView: View {
                             .scaledToFit()
                             .frame(width: logoSize, height: logoSize)
 
-                        Image("clawos_icon_spin")
-                            .resizable()
-                            .renderingMode(.template)
-                            .scaledToFit()
-                            .frame(width: logoSize, height: logoSize)
-                            .foregroundStyle(appState.currentVisualTheme.accent)
-                            .rotationEffect(.degrees(rotation), anchor: iconAnchor)
+                        Group {
+                            if appState.selectedVisualThemeID == .neutral {
+                                Image("clawos_icon_spin")
+                                    .resizable()
+                                    .scaledToFit()
+                            } else {
+                                Image("clawos_icon_spin")
+                                    .resizable()
+                                    .renderingMode(.template)
+                                    .scaledToFit()
+                                    .foregroundStyle(appState.currentVisualTheme.accent)
+                            }
+                        }
+                        .frame(width: logoSize, height: logoSize)
+                        .rotationEffect(.degrees(rotation), anchor: iconAnchor)
                     }
                     .offset(y: offsetY)
                 )
