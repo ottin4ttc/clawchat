@@ -17,6 +17,8 @@
 
 import { parseArgs } from "node:util";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const { values: args } = parseArgs({
   options: {
@@ -24,6 +26,7 @@ const { values: args } = parseArgs({
     relay: { type: "string", default: "wss://clawchat-production-db31.up.railway.app" },
     token: { type: "string", default: "" },
     session: { type: "string", default: "clawchat" },
+    config: { type: "string", default: "" },
   },
 });
 
@@ -33,6 +36,101 @@ const AUTH_TOKEN = args.token!;
 const SESSION_KEY = args.session!;
 const GATEWAY_ID = "openclaw-bridge";
 const GATEWAY_TOKEN = "bridge-openclaw-stable-token";
+
+// ---------------------------------------------------------------------------
+// Load agent info from OpenClaw config
+// ---------------------------------------------------------------------------
+
+interface AgentMeta {
+  id: string;
+  name: string;
+  model: string;
+  availableModels: string[];
+  avatar: string;
+}
+
+function makeAgentId(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "agent";
+
+  const normalized = trimmed
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || trimmed;
+}
+
+function encodeAgentDescriptor(meta: AgentMeta): string {
+  return `${meta.id}::${meta.name}::${meta.model}::${meta.availableModels.join("|")}`;
+}
+
+function loadAgentMeta(): AgentMeta {
+  const configPath = args.config || path.join(
+    process.env.HOME || "/root",
+    ".openclaw/openclaw.json"
+  );
+
+  const meta: AgentMeta = {
+    id: "default",
+    name: "Agent",
+    model: "unknown",
+    availableModels: [],
+    avatar: "",
+  };
+
+  try {
+    const raw = fs.readFileSync(configPath, "utf-8");
+    const config = JSON.parse(raw);
+
+    const primary = config?.agents?.defaults?.model?.primary;
+    if (primary) {
+      meta.model = primary.includes("/")
+        ? primary.split("/").pop()!
+        : primary;
+    }
+
+    const fallbacks = (config?.agents?.defaults?.model?.fallbacks ?? [])
+      .map((value: unknown) => {
+        if (typeof value !== "string" || !value) return null;
+        return value.includes("/") ? value.split("/").pop()! : value;
+      })
+      .filter((value: string | null): value is string => value !== null);
+    meta.availableModels = Array.from(new Set([meta.model, ...fallbacks].filter(Boolean)));
+
+    const wsDir = config?.agents?.defaults?.workspace
+      || path.join(process.env.HOME || "/root", ".openclaw/workspace");
+
+    for (const file of ["IDENTITY.md", "SOUL.md"]) {
+      try {
+        const content = fs.readFileSync(path.join(wsDir, file), "utf-8");
+        const namePatterns = [
+          /\*\*名字[：:]\*\*\s*(.+)/,
+          /你叫(.{1,10})[。，\.]/,
+          /名字[：:]\s*(.+)/,
+          /# (.+) - /,
+        ];
+        for (const pat of namePatterns) {
+          const m = content.match(pat);
+          if (m) {
+            meta.name = m[1].trim();
+            break;
+          }
+        }
+        if (meta.name !== "Agent") break;
+      } catch {}
+    }
+    meta.id = makeAgentId(meta.name);
+  } catch (e) {
+    console.warn(`[config] Could not read OpenClaw config: ${e}`);
+  }
+
+  return meta;
+}
+
+const AGENT_META = loadAgentMeta();
+const RELAY_AGENT = encodeAgentDescriptor(AGENT_META);
+console.log(`[config] Agent: "${AGENT_META.name}" model=${AGENT_META.model}`);
 
 // ---------------------------------------------------------------------------
 // Device Identity (Ed25519 keypair for OpenClaw gateway auth)
@@ -192,7 +290,7 @@ function handleChatEvent(payload: any) {
           type: "message.stream",
           id: run.relayMessageId,
           ts: Date.now(),
-          agentId: "default",
+          agentId: AGENT_META.id,
           delta: block.text,
           phase: "streaming",
         });
@@ -202,7 +300,7 @@ function handleChatEvent(payload: any) {
           type: "message.reasoning",
           id: run.relayMessageId,
           ts: Date.now(),
-          agentId: "default",
+          agentId: AGENT_META.id,
           text: block.thinking,
           phase: "streaming",
         });
@@ -211,7 +309,7 @@ function handleChatEvent(payload: any) {
           type: "tool.event",
           id: crypto.randomUUID(),
           ts: Date.now(),
-          agentId: "default",
+          agentId: AGENT_META.id,
           tool: block.name || "tool",
           phase: "start",
           label: block.name || "Tool call",
@@ -222,7 +320,7 @@ function handleChatEvent(payload: any) {
           type: "tool.event",
           id: crypto.randomUUID(),
           ts: Date.now(),
-          agentId: "default",
+          agentId: AGENT_META.id,
           tool: "tool",
           phase: "result",
           label: "Done",
@@ -246,7 +344,7 @@ function handleChatEvent(payload: any) {
       type: "message.stream",
       id: run.relayMessageId,
       ts: Date.now(),
-      agentId: "default",
+      agentId: AGENT_META.id,
       delta: "",
       phase: "done",
       finalText,
@@ -299,7 +397,14 @@ function connectRelay() {
       gatewayId: GATEWAY_ID,
       protocolVersion: "0.1.0",
       version: "0.1.0",
-      agents: ["default"],
+      agents: [RELAY_AGENT],
+      agentsMeta: {
+        [RELAY_AGENT]: {
+          name: AGENT_META.name,
+          model: AGENT_META.model,
+          avatar: AGENT_META.avatar,
+        },
+      },
     });
   });
 
@@ -325,7 +430,8 @@ function handleRelayMessage(msg: any) {
       console.log(`[relay] Registered! Paired devices: ${msg.pairedDevices}`);
       relayReady = true;
 
-      // Generate pairing code
+      broadcastStatus();
+
       sendToRelay({
         type: "pair.generate",
         id: crypto.randomUUID(),
@@ -345,16 +451,39 @@ function handleRelayMessage(msg: any) {
       console.log("");
       break;
 
+    case "app.paired":
+    case "app.connected":
+      console.log(`[relay] Device ${msg.type}, broadcasting status...`);
+      broadcastStatus();
+      break;
+
+    case "status.request":
+      console.log("[relay] Received status.request, responding...");
+      sendToRelay({
+        type: "status.response",
+        id: msg.id || crypto.randomUUID(),
+        ts: Date.now(),
+        gatewayOnline: openclawReady,
+        agents: [RELAY_AGENT],
+        agentsMeta: {
+          [RELAY_AGENT]: {
+            name: AGENT_META.name,
+            model: AGENT_META.model,
+            avatar: AGENT_META.avatar,
+          },
+        },
+        connectedDevices: 1,
+      });
+      break;
+
     case "message.inbound":
       handleInboundMessage(msg);
       break;
 
     case "typing":
-      // Could forward to openclaw if needed
       break;
 
     default:
-      // Ignore unknown types (forward compatibility)
       break;
   }
 }
@@ -372,14 +501,15 @@ function handleInboundMessage(msg: any) {
     return;
   }
 
-  console.log(`[user] ${msg.text}`);
+  const attachments = Array.isArray(msg.attachments) ? msg.attachments : undefined;
+  console.log(`[user] ${msg.text || "[attachment]"}${attachments?.length ? ` (+${attachments.length} attachment${attachments.length > 1 ? "s" : ""})` : ""}`);
 
   // Send typing indicator
   sendToRelay({
     type: "typing",
     id: crypto.randomUUID(),
     ts: Date.now(),
-    agentId: "default",
+    agentId: AGENT_META.id,
     active: true,
   });
 
@@ -397,7 +527,8 @@ function handleInboundMessage(msg: any) {
     method: "chat.send",
     params: {
       sessionKey: SESSION_KEY,
-      message: msg.text,
+      message: msg.text || "",
+      attachments,
       idempotencyKey,
     },
   });
@@ -406,6 +537,24 @@ function handleInboundMessage(msg: any) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function broadcastStatus() {
+  sendToRelay({
+    type: "status.response",
+    id: crypto.randomUUID(),
+    ts: Date.now(),
+    gatewayOnline: openclawReady,
+    agents: [RELAY_AGENT],
+    agentsMeta: {
+      [RELAY_AGENT]: {
+        name: AGENT_META.name,
+        model: AGENT_META.model,
+        avatar: AGENT_META.avatar,
+      },
+    },
+    connectedDevices: 1,
+  });
+}
 
 function sendToOpenClaw(msg: any) {
   if (openclawWs?.readyState === WebSocket.OPEN) {

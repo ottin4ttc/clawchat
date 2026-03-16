@@ -1,0 +1,149 @@
+import SwiftUI
+
+enum AppVisualThemeID: String, CaseIterable, Identifiable, Codable {
+    case neutral
+    case eva00
+    case eva01
+    case eva02
+
+    var id: String { rawValue }
+
+    var alternateIconName: String? {
+        switch self {
+        case .neutral: nil
+        case .eva00: "AltIcon-EVA00"
+        case .eva01: "AltIcon-EVA01"
+        case .eva02: "AltIcon-EVA02"
+        }
+    }
+}
+
+struct AppVisualTheme {
+    let id: AppVisualThemeID
+    let displayName: String
+    let accent: Color
+    let pageGradientTop: Color
+    let pageGradientBottom: Color
+    let pageGlow: Color
+    let ambientAssetName: String?
+    let ambientOpacity: Double
+    let bannerAssetName: String?
+    let bannerGradient: [Color]
+    let tabBarFill: Color
+    let softFill: Color
+    let softStroke: Color
+    let rowFill: Color
+    let rowStroke: Color
+    let cardTint: Color
+    let cardStroke: Color
+    let logoTint: Color
+    let themeLogoAssetName: String?
+
+    static func theme(for id: AppVisualThemeID) -> AppVisualTheme {
+        switch id {
+        case .neutral:
+            AppVisualTheme(
+                id: .neutral,
+                displayName: "默认",
+                accent: Color(.label),
+                pageGradientTop: Color(.systemBackground),
+                pageGradientBottom: Color(.systemGray6),
+                pageGlow: Color.white,
+                ambientAssetName: nil,
+                ambientOpacity: 0,
+                bannerAssetName: nil,
+                bannerGradient: [Color(.systemGray3), Color(.systemGray5), Color(.systemGray6)],
+                tabBarFill: Color.white.opacity(0.9),
+                softFill: Color(.systemGray6),
+                softStroke: Color(.systemGray5),
+                rowFill: Color.white.opacity(0.72),
+                rowStroke: Color(.systemGray5).opacity(0.65),
+                cardTint: Color.white.opacity(0.06),
+                cardStroke: Color.white.opacity(0.4),
+                logoTint: Color(.systemGray3),
+                themeLogoAssetName: nil
+            )
+
+        case .eva00:
+            AppVisualTheme(
+                id: .eva00,
+                displayName: "零号机",
+                accent: Color(red: 0.63, green: 0.76, blue: 0.88),
+                pageGradientTop: Color(red: 0.965, green: 0.985, blue: 0.995),
+                pageGradientBottom: Color(red: 0.925, green: 0.95, blue: 0.978),
+                pageGlow: Color(red: 0.98, green: 0.9, blue: 0.76),
+                ambientAssetName: "theme_eva00_ambient",
+                ambientOpacity: 0.18,
+                bannerAssetName: "theme_eva00_banner",
+                bannerGradient: [
+                    Color(red: 0.89, green: 0.93, blue: 0.97),
+                    Color(red: 0.83, green: 0.88, blue: 0.94),
+                    Color(red: 0.78, green: 0.84, blue: 0.9),
+                ],
+                tabBarFill: Color.white.opacity(0.82),
+                softFill: Color(red: 0.965, green: 0.978, blue: 0.988),
+                softStroke: Color(red: 0.86, green: 0.9, blue: 0.94),
+                rowFill: Color.white.opacity(0.62),
+                rowStroke: Color(red: 0.84, green: 0.88, blue: 0.93).opacity(0.8),
+                cardTint: Color(red: 0.86, green: 0.92, blue: 0.98).opacity(0.14),
+                cardStroke: Color.white.opacity(0.62),
+                logoTint: Color(red: 0.74, green: 0.83, blue: 0.92),
+                themeLogoAssetName: "theme_eva00_logo"
+            )
+
+        case .eva01:
+            AppVisualTheme(
+                id: .eva01,
+                displayName: "初号机",
+                accent: Color(red: 0.56, green: 0.27, blue: 0.78),
+                pageGradientTop: Color(red: 0.97, green: 0.96, blue: 0.99),
+                pageGradientBottom: Color(red: 0.94, green: 0.92, blue: 0.97),
+                pageGlow: Color(red: 0.72, green: 0.55, blue: 0.92),
+                ambientAssetName: "theme_eva01_ambient",
+                ambientOpacity: 0.15,
+                bannerAssetName: "theme_eva01_banner",
+                bannerGradient: [
+                    Color(red: 0.90, green: 0.86, blue: 0.96),
+                    Color(red: 0.82, green: 0.76, blue: 0.92),
+                    Color(red: 0.74, green: 0.66, blue: 0.88),
+                ],
+                tabBarFill: Color(red: 0.96, green: 0.94, blue: 0.99).opacity(0.88),
+                softFill: Color(red: 0.96, green: 0.95, blue: 0.99),
+                softStroke: Color(red: 0.84, green: 0.78, blue: 0.92),
+                rowFill: Color.white.opacity(0.62),
+                rowStroke: Color(red: 0.82, green: 0.76, blue: 0.90).opacity(0.8),
+                cardTint: Color(red: 0.80, green: 0.68, blue: 0.96).opacity(0.14),
+                cardStroke: Color.white.opacity(0.62),
+                logoTint: Color(red: 0.68, green: 0.52, blue: 0.86),
+                themeLogoAssetName: "theme_eva01_logo"
+            )
+
+        case .eva02:
+            AppVisualTheme(
+                id: .eva02,
+                displayName: "贰号机",
+                accent: Color(red: 0.88, green: 0.28, blue: 0.22),
+                pageGradientTop: Color(red: 0.995, green: 0.965, blue: 0.96),
+                pageGradientBottom: Color(red: 0.98, green: 0.93, blue: 0.92),
+                pageGlow: Color(red: 0.96, green: 0.72, blue: 0.42),
+                ambientAssetName: "theme_eva02_ambient",
+                ambientOpacity: 0.16,
+                bannerAssetName: "theme_eva02_banner",
+                bannerGradient: [
+                    Color(red: 0.97, green: 0.89, blue: 0.87),
+                    Color(red: 0.94, green: 0.82, blue: 0.78),
+                    Color(red: 0.90, green: 0.74, blue: 0.70),
+                ],
+                tabBarFill: Color(red: 0.99, green: 0.96, blue: 0.95).opacity(0.88),
+                softFill: Color(red: 0.99, green: 0.96, blue: 0.95),
+                softStroke: Color(red: 0.92, green: 0.80, blue: 0.78),
+                rowFill: Color.white.opacity(0.62),
+                rowStroke: Color(red: 0.90, green: 0.78, blue: 0.76).opacity(0.8),
+                cardTint: Color(red: 0.96, green: 0.72, blue: 0.68).opacity(0.14),
+                cardStroke: Color.white.opacity(0.62),
+                logoTint: Color(red: 0.86, green: 0.48, blue: 0.42),
+                themeLogoAssetName: "theme_eva02_logo"
+            )
+        }
+    }
+}
