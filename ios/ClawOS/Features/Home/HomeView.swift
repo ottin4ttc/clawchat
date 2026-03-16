@@ -31,12 +31,7 @@ struct HomeView: View {
             .ignoresSafeArea()
 
             SessionListView(
-                isSidebarDragging: isDragging || isSidebarOpen,
-                onMenuTap: {
-                    withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
-                        isSidebarOpen = true
-                    }
-                }
+                isSidebarDragging: isDragging || isSidebarOpen
             )
             .blur(radius: progress * 6)
             .scaleEffect(1.0 - progress * 0.03)
@@ -46,18 +41,17 @@ struct HomeView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(isSidebarOpen && !isDragging)
                 .onTapGesture {
-                    withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                         isSidebarOpen = false
                     }
                 }
 
             AgentSidebarView(onDismiss: {
-                withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                     isSidebarOpen = false
                 }
             })
             .frame(width: HomeSidebarMetrics.sidebarWidth)
-            .shadow(color: .black.opacity(0.15 * Double(progress)), radius: 20, x: 6, y: 0)
             .padding(.top, 12)
             .padding(.bottom, 96)
             .padding(.leading, HomeSidebarMetrics.sidebarLeadingPadding)
@@ -96,7 +90,7 @@ struct HomeView: View {
                 let v = value.velocity.width
                 let final = resolvedOffset
 
-                withAnimation(.interpolatingSpring(stiffness: 400, damping: 35)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                     if isSidebarOpen {
                         if final < HomeSidebarMetrics.travelWidth * 0.5 || v < -200 {
                             isSidebarOpen = false

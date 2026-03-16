@@ -4,8 +4,7 @@
   "workspaces": [
     "packages/*",
     "service",
-    "cli",
-    "frontend"
+    "cli"
   ],
   "devDependencies": {
     "bun-types": "^1.3.10",

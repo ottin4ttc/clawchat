@@ -6,5 +6,12 @@
 	<string>ClawOS 需要访问麦克风以进行语音输入</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>ClawOS 需要语音识别权限以将语音转换为文字</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ClawOS 需要访问本地网络以连接 OpenClaw Gateway</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
