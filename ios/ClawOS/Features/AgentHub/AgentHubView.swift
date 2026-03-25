@@ -137,19 +137,24 @@ struct AgentHubView: View {
     // MARK: - Snap-to-card Carousel
 
     private var carousel: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 16) {
-                let items = displayItems
-                ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
-                    cardForItem(item)
-                        .containerRelativeFrame(.horizontal, count: 20, span: 17, spacing: 16)
+        GeometryReader { geo in
+            let cardWidth = geo.size.width * 0.82
+            let hMargin = (geo.size.width - cardWidth) / 2
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 16) {
+                    let items = displayItems
+                    ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
+                        cardForItem(item)
+                            .frame(width: cardWidth)
+                    }
                 }
+                .scrollTargetLayout()
+                .padding(.vertical, 20)
             }
-            .scrollTargetLayout()
-            .padding(.vertical, 20)
+            .scrollTargetBehavior(.viewAligned)
+            .contentMargins(.horizontal, hMargin, for: .scrollContent)
         }
-        .scrollTargetBehavior(.viewAligned)
-        .contentMargins(.horizontal, AppTheme.Spacing.xl, for: .scrollContent)
     }
 
     private var displayItems: [AgentStripItem] {

@@ -65,8 +65,16 @@ struct AgentCardView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .aspectRatio(0.65, contentMode: .fit) // Slightly taller than 3:4 (0.75) but not full screen
+        .aspectRatio(0.65, contentMode: .fit)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.thinMaterial)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
+        )
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
@@ -248,8 +256,16 @@ struct AgentGroupCardView: View {
             .zIndex(3) // Roster on top to ensure taps are caught
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .aspectRatio(0.65, contentMode: .fit) // Slightly taller than 3:4 (0.75) but not full screen
+        .aspectRatio(0.65, contentMode: .fit)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.thinMaterial)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
+        )
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .onAppear {
             if frontAgentId == nil {

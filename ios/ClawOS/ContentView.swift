@@ -62,14 +62,27 @@ struct ContentView: View {
     }
 
     private func configureTabBarAppearance() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithDefaultBackground()
-        appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
-        appearance.backgroundColor = UIColor(appState.currentVisualTheme.tabBarFill)
-        appearance.shadowColor = UIColor.separator.withAlphaComponent(0.15)
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithDefaultBackground()
+        tabAppearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+        tabAppearance.backgroundColor = UIColor(appState.currentVisualTheme.tabBarFill)
+        tabAppearance.shadowColor = UIColor.separator.withAlphaComponent(0.15)
 
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithDefaultBackground()
+        navAppearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+        navAppearance.backgroundColor = UIColor(appState.currentVisualTheme.tabBarFill)
+        navAppearance.shadowColor = UIColor.separator.withAlphaComponent(0.15)
+
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        if #available(iOS 15.0, *) {
+            UINavigationBar.appearance().compactScrollEdgeAppearance = navAppearance
+        }
     }
 }
 

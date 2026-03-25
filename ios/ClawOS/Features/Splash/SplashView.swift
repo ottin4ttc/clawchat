@@ -15,10 +15,11 @@ struct SplashView: View {
                 .ignoresSafeArea()
                 .overlay(
                     ZStack {
-                        // 只有纯黑色的文字部分，没有蓝色的六爪
                         Image("clawos_logo_text")
                             .resizable()
+                            .renderingMode(.template)
                             .scaledToFit()
+                            .foregroundStyle(.primary)
                             .frame(width: logoSize, height: logoSize)
 
                         Group {
