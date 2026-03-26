@@ -1,5 +1,42 @@
 import SwiftUI
 
+enum MomentDetailLayoutMetrics {
+    static let cardHeightRatio: CGFloat = 0.45
+    static let dismissTravelPadding: CGFloat = 60
+    static let minimumBottomPadding: CGFloat = 16
+    static let maximumBottomPadding: CGFloat = 20
+    static let ctaHeight: CGFloat = 58
+    static let contentTopPadding: CGFloat = 20
+    static let showsTopHandle = false
+
+    static func maxCardPull(for containerHeight: CGFloat) -> CGFloat {
+        containerHeight * cardHeightRatio
+    }
+
+    static func currentCardHeight(for containerHeight: CGFloat, pullUp: CGFloat) -> CGFloat {
+        maxCardPull(for: containerHeight)
+    }
+
+    static func ctaBottomPadding(for safeBottomInset: CGFloat) -> CGFloat {
+        max(minimumBottomPadding, min(maximumBottomPadding, safeBottomInset))
+    }
+
+    static func ctaReservedHeight(for safeBottomInset: CGFloat) -> CGFloat {
+        ctaHeight + ctaBottomPadding(for: safeBottomInset)
+    }
+
+    static func dismissTravel(for containerSize: CGSize) -> CGSize {
+        CGSize(
+            width: containerSize.width + dismissTravelPadding,
+            height: containerSize.height + dismissTravelPadding
+        )
+    }
+}
+
+enum MomentDetailCTAStyle {
+    static let usesTintedGlass = false
+}
+
 struct MomentDetailOverlay: View {
     @Environment(AppState.self) private var appState
     let moment: MockMoment
@@ -15,28 +52,42 @@ struct MomentDetailOverlay: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.black
-                .opacity(isPresented ? Double(1 - dismissProgress) * 0.8 : 0)
-                .ignoresSafeArea()
-                .onTapGesture { dismiss() }
+        GeometryReader { proxy in
+            let containerSize = proxy.size
+            let safeBottomInset = proxy.safeAreaInsets.bottom
 
-            MomentDetailView(moment: moment, selectedImageIndex: $selectedImageIndex, onDismiss: { dismiss() })
+            ZStack {
+                Color.black
+                    .opacity(isPresented ? Double(1 - dismissProgress) * 0.8 : 0)
+                    .ignoresSafeArea()
+                    .onTapGesture { dismiss(in: containerSize) }
+
+                MomentDetailView(
+                    moment: moment,
+                    selectedImageIndex: $selectedImageIndex,
+                    containerHeight: containerSize.height,
+                    safeBottomInset: safeBottomInset,
+                    onDismiss: { dismiss(in: containerSize) }
+                )
                 .ignoresSafeArea()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .compositingGroup()
                 .clipShape(RoundedRectangle(cornerRadius: isDragging ? 24 : 0, style: .continuous))
                 .scaleEffect(isDragging ? max(0.8, 1.0 - dismissProgress * 0.2) : 1.0)
                 .offset(x: dragOffset.width, y: dragOffset.height)
-                .offset(x: isPresented ? 0 : UIScreen.main.bounds.width)
-                .simultaneousGesture(contentDismissGesture)
+                .offset(x: isPresented ? 0 : containerSize.width)
+                .simultaneousGesture(contentDismissGesture(in: containerSize))
                 .overlay(alignment: .leading) {
-                    Color.clear
-                        .frame(width: MomentDismissGestureBehavior.edgeActivationWidth)
-                        .frame(maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .highPriorityGesture(edgeDismissGesture)
+                    VStack(spacing: 0) {
+                        Color.clear
+                            .frame(width: MomentDismissGestureBehavior.edgeActivationWidth, height: 100)
+                        Color.clear
+                            .frame(width: MomentDismissGestureBehavior.edgeActivationWidth)
+                            .frame(maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(edgeDismissGesture(in: containerSize))
+                    }
                 }
+            }
         }
         .onAppear {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
@@ -45,32 +96,42 @@ struct MomentDetailOverlay: View {
         }
     }
 
-    private var contentDismissGesture: some Gesture {
+    private func contentDismissGesture(in containerSize: CGSize) -> some Gesture {
         dismissGesture(
             allowsContentHorizontalDismiss: selectedImageIndex == 0,
-            requiresEdgeStart: false
+            requiresEdgeStart: false,
+            minimumDistance: 20,
+            containerSize: containerSize,
+            contentHorizontalStartLimitX: MomentDismissGestureBehavior.contentHorizontalStartLimitX(
+                for: containerSize.width
+            )
         )
     }
 
-    private var edgeDismissGesture: some Gesture {
+    private func edgeDismissGesture(in containerSize: CGSize) -> some Gesture {
         dismissGesture(
             allowsContentHorizontalDismiss: true,
-            requiresEdgeStart: true
+            requiresEdgeStart: true,
+            containerSize: containerSize
         )
     }
 
     private func dismissGesture(
         allowsContentHorizontalDismiss: Bool,
-        requiresEdgeStart: Bool
+        requiresEdgeStart: Bool,
+        minimumDistance: CGFloat = 4,
+        containerSize: CGSize,
+        contentHorizontalStartLimitX: CGFloat? = nil
     ) -> some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .global)
+        DragGesture(minimumDistance: minimumDistance, coordinateSpace: .global)
             .onChanged { value in
                 if dismissAxis == nil {
                     dismissAxis = MomentDismissGestureBehavior.beginAxis(
                         startLocation: value.startLocation,
                         translation: value.translation,
                         allowsContentHorizontalDismiss: allowsContentHorizontalDismiss,
-                        requiresEdgeStart: requiresEdgeStart
+                        requiresEdgeStart: requiresEdgeStart,
+                        contentHorizontalStartLimitX: contentHorizontalStartLimitX
                     )
 
                     if dismissAxis != nil {
@@ -106,7 +167,7 @@ struct MomentDetailOverlay: View {
                     velocity: resolvedVelocity,
                     axis: dismissAxis
                 ) {
-                    dismiss(velocityX: resolvedVelocity.width, velocityY: resolvedVelocity.height)
+                    dismiss(in: containerSize, velocityX: resolvedVelocity.width, velocityY: resolvedVelocity.height)
                 } else {
                     resetDragState(animated: true)
                 }
@@ -129,16 +190,15 @@ struct MomentDetailOverlay: View {
         }
     }
 
-    private func dismiss(velocityX: CGFloat = 0, velocityY: CGFloat = 0) {
-        let sw = UIScreen.main.bounds.width + 60
-        let sh = UIScreen.main.bounds.height + 60
+    private func dismiss(in containerSize: CGSize, velocityX: CGFloat = 0, velocityY: CGFloat = 0) {
+        let travel = MomentDetailLayoutMetrics.dismissTravel(for: containerSize)
 
         withAnimation(.easeOut(duration: 0.26)) {
             if abs(velocityX) > abs(velocityY) || abs(dragOffset.width) > abs(dragOffset.height) {
-                dragOffset.width = velocityX >= 0 && dragOffset.width >= 0 ? sw : -sw
+                dragOffset.width = velocityX >= 0 && dragOffset.width >= 0 ? travel.width : -travel.width
                 dragOffset.height += velocityY * MomentDismissGestureBehavior.crossAxisDamping
             } else {
-                dragOffset.height = velocityY >= 0 && dragOffset.height >= 0 ? sh : -sh
+                dragOffset.height = velocityY >= 0 && dragOffset.height >= 0 ? travel.height : -travel.height
                 dragOffset.width += velocityX * MomentDismissGestureBehavior.crossAxisDamping
             }
         }
@@ -152,24 +212,28 @@ struct MomentDetailOverlay: View {
 
 struct MomentDetailView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     let moment: MockMoment
     @Binding var selectedImageIndex: Int
+    let containerHeight: CGFloat
+    let safeBottomInset: CGFloat
     var onDismiss: () -> Void
 
     @State private var isLiked: Bool
     @State private var showHireConfirmation = false
-    @State private var cardPullUp: CGFloat = 0
-    @State private var lastCardPullUp: CGFloat = 0
 
-    private let minCardPull: CGFloat = 0
-    private let maxCardPull: CGFloat = UIScreen.main.bounds.height * 0.45
-
-    private var pullProgress: CGFloat { min(1, cardPullUp / maxCardPull) }
-
-    init(moment: MockMoment, selectedImageIndex: Binding<Int>, onDismiss: @escaping () -> Void) {
+    init(
+        moment: MockMoment,
+        selectedImageIndex: Binding<Int>,
+        containerHeight: CGFloat,
+        safeBottomInset: CGFloat,
+        onDismiss: @escaping () -> Void
+    ) {
         self.moment = moment
         self._selectedImageIndex = selectedImageIndex
+        self.containerHeight = containerHeight
+        self.safeBottomInset = safeBottomInset
         self.onDismiss = onDismiss
         self._isLiked = State(initialValue: moment.isLiked)
     }
@@ -182,21 +246,14 @@ struct MomentDetailView: View {
         Color(hex: moment.coverGradient.last ?? "764ba2")
     }
 
-    private var ctaColor: Color {
-        appState.currentVisualTheme.accent
-    }
-
-    private var safeBottomInset: CGFloat {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        return scenes.first?.keyWindow?.safeAreaInsets.bottom ?? 0
-    }
+    private var isDark: Bool { colorScheme == .dark }
 
     private var ctaBottomPadding: CGFloat {
-        max(16, min(20, safeBottomInset))
+        MomentDetailLayoutMetrics.ctaBottomPadding(for: safeBottomInset)
     }
 
     private var ctaReservedHeight: CGFloat {
-        58 + ctaBottomPadding
+        MomentDetailLayoutMetrics.ctaReservedHeight(for: safeBottomInset)
     }
 
     private var displayLikes: String {
@@ -386,24 +443,21 @@ struct MomentDetailView: View {
     // MARK: - Information Card (pull-up)
 
     private var informationCard: some View {
-        let baseHeight = UIScreen.main.bounds.height * 0.45
-        let currentHeight = baseHeight + cardPullUp
+        let currentHeight = MomentDetailLayoutMetrics.currentCardHeight(for: containerHeight, pullUp: 0)
 
         return VStack(alignment: .leading, spacing: 0) {
-            // Drag Handle Area
-            VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(Color.white.opacity(0.2))
-                    .frame(width: 36, height: 5)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-                
-                // Add some empty space below the handle to increase the drag target area
-                Color.clear.frame(height: 10)
+            if MomentDetailLayoutMetrics.showsTopHandle {
+                VStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 2.5)
+                        .fill(isDark ? Color.white.opacity(0.2) : Color.black.opacity(0.12))
+                        .frame(width: 36, height: 5)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
+
+                    Color.clear.frame(height: 10)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .gesture(cardDragGesture)
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -411,16 +465,17 @@ struct MomentDetailView: View {
 
                     Text(moment.title)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(.label))
 
                     Text(moment.content)
                         .font(.system(size: 15))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(Color(.label).opacity(0.85))
                         .lineSpacing(4)
 
                     engagementRow
                         .padding(.top, 8)
                 }
+                .padding(.top, MomentDetailLayoutMetrics.contentTopPadding)
                 .padding(.horizontal, 24)
                 .padding(.bottom, ctaReservedHeight)
             }
@@ -430,11 +485,11 @@ struct MomentDetailView: View {
         .frame(height: currentHeight, alignment: .top)
         .background(
             ZStack {
-                Color(red: 0.08, green: 0.08, blue: 0.1)
+                Color(.systemBackground)
                     .opacity(0.95)
 
                 LinearGradient(
-                    colors: [Color.black.opacity(0.3), .clear],
+                    colors: [isDark ? Color.black.opacity(0.3) : Color.black.opacity(0.03), .clear],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -451,37 +506,13 @@ struct MomentDetailView: View {
                 )
             )
         )
-        .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: -8)
+        .shadow(color: Color.black.opacity(isDark ? 0.4 : 0.1), radius: 20, x: 0, y: -8)
         .padding(.top, -20)
         .overlay(alignment: .bottom) {
             ctaBar
                 .padding(.horizontal, 24)
                 .padding(.bottom, ctaBottomPadding)
         }
-    }
-
-    private var cardDragGesture: some Gesture {
-        DragGesture(coordinateSpace: .global)
-            .onChanged { value in
-                guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                let translation = -value.translation.height
-                cardPullUp = max(minCardPull, min(maxCardPull, lastCardPullUp + translation))
-            }
-            .onEnded { value in
-                guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                let velocity = -value.velocity.height
-                let translation = -value.translation.height
-                let projectedPosition = lastCardPullUp + translation + velocity * 0.2
-
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    if projectedPosition > maxCardPull * 0.3 {
-                        cardPullUp = maxCardPull
-                    } else {
-                        cardPullUp = 0
-                    }
-                    lastCardPullUp = cardPullUp
-                }
-            }
     }
 
     // MARK: - Author Row
@@ -493,7 +524,7 @@ struct MomentDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(moment.authorName)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(.label))
 
                 HStack(spacing: 4) {
                     Text(displayLikes)
@@ -504,7 +535,7 @@ struct MomentDetailView: View {
                     Text(moment.timeAgo)
                         .font(.system(size: 11))
                 }
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Color(.secondaryLabel))
             }
 
             Spacer()
@@ -520,7 +551,7 @@ struct MomentDetailView: View {
             Spacer()
         }
         .font(.system(size: 12))
-        .foregroundStyle(.white.opacity(0.4))
+        .foregroundStyle(Color(.tertiaryLabel))
         .padding(.top, 4)
     }
 
@@ -539,10 +570,10 @@ struct MomentDetailView: View {
             Text(showHireConfirmation ? "已加入候选" : "雇佣 \(moment.authorName)")
                 .font(.system(size: 15, weight: .bold))
                 .lineLimit(1)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.label))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .adaptiveTintedGlass(in: Capsule(), tint: ctaColor, interactive: true)
+                .adaptiveGlass(in: Capsule(), interactive: true)
         }
         .buttonStyle(BounceButtonStyle())
     }

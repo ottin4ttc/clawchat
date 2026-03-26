@@ -10,6 +10,7 @@ enum MomentDismissGestureBehavior {
     static let edgeHorizontalDistance: CGFloat = 8
     static let edgeHorizontalDominance: CGFloat = 0.75
 
+    static let contentHorizontalActivationWidthRatio: CGFloat = 0.5
     static let contentHorizontalDistance: CGFloat = 32
     static let contentHorizontalDominance: CGFloat = 1.4
 
@@ -30,12 +31,14 @@ enum MomentDismissGestureBehavior {
         startLocation: CGPoint,
         translation: CGSize,
         allowsContentHorizontalDismiss: Bool,
-        requiresEdgeStart: Bool = false
+        requiresEdgeStart: Bool = false,
+        contentHorizontalStartLimitX: CGFloat? = nil
     ) -> MomentDismissAxis? {
         let dx = translation.width
         let dy = translation.height
         let absDy = abs(dy)
         let startsFromEdge = startLocation.x <= edgeActivationWidth
+        let startsWithinContentActivationRegion = contentHorizontalStartLimitX.map { startLocation.x <= $0 } ?? true
 
         if startsFromEdge,
            dx > edgeHorizontalDistance,
@@ -48,12 +51,17 @@ enum MomentDismissGestureBehavior {
         }
 
         if allowsContentHorizontalDismiss,
+           startsWithinContentActivationRegion,
            dx > contentHorizontalDistance,
            dx > absDy * contentHorizontalDominance {
             return .horizontal
         }
 
         return nil
+    }
+
+    static func contentHorizontalStartLimitX(for containerWidth: CGFloat) -> CGFloat {
+        containerWidth * contentHorizontalActivationWidthRatio
     }
 
     static func resolvedOffset(for translation: CGSize, axis: MomentDismissAxis) -> CGSize {

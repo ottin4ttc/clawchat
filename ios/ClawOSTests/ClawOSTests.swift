@@ -8,6 +8,7 @@
 import Testing
 import Foundation
 import CoreGraphics
+import UIKit
 @testable import ClawOS
 
 @MainActor
@@ -478,6 +479,80 @@ struct ClawOSTests {
         #expect(laterImageAxis == nil)
     }
 
+    @Test("Aha 故事内容区仅左半屏起手右滑可触发退出")
+    func momentDismissContentSwipeOnlyBeginsFromLeftHalf() {
+        let leftHalfAxis = MomentDismissGestureBehavior.beginAxis(
+            startLocation: CGPoint(x: 180, y: 320),
+            translation: CGSize(width: 42, height: 12),
+            allowsContentHorizontalDismiss: true,
+            contentHorizontalStartLimitX: 195
+        )
+        let rightHalfAxis = MomentDismissGestureBehavior.beginAxis(
+            startLocation: CGPoint(x: 240, y: 320),
+            translation: CGSize(width: 42, height: 12),
+            allowsContentHorizontalDismiss: true,
+            contentHorizontalStartLimitX: 195
+        )
+
+        #expect(leftHalfAxis == .horizontal)
+        #expect(rightHalfAxis == nil)
+    }
+
+    @Test("Agent Hub 头部隐藏标题并统一 liquid glass 控件")
+    func agentHubHeaderChromeUsesUnifiedGlassControls() {
+        #expect(AgentHubHeaderChrome.showsTitle == false)
+        #expect(AgentHubHeaderChrome.controlDiameter == 40)
+        #expect(AgentHubHeaderChrome.settingsUsesLiquidGlass)
+    }
+
+    @Test("Agent Hub 无 gateway 时左上角按钮仍提供配对入口")
+    func agentHubGatewayMenuFallsBackToPairingWhenEmpty() {
+        #expect(AgentHubGatewayMenuBehavior.mode(for: []) == .pairingOnly)
+    }
+
+    @Test("Agent Hub 有 gateway 时显示切换菜单并保留新增入口")
+    func agentHubGatewayMenuShowsSwitcherWhenGatewaysExist() {
+        let gateways = [
+            Gateway(
+                id: "gw-1",
+                name: "Local",
+                url: "ws://localhost:8787",
+                type: .local,
+                status: .online,
+                ping: nil,
+                connectionMethod: nil
+            )
+        ]
+
+        #expect(AgentHubGatewayMenuBehavior.mode(for: gateways) == .switcherWithAdd)
+    }
+
+    @Test("隐私政策提供标准章节而非占位文本")
+    func privacyPolicyUsesStandardSections() {
+        let document = LegalDocumentContentProvider.document(for: .privacyPolicy)
+
+        #expect(document.title == "隐私政策")
+        #expect(document.summary.contains("ClawOS"))
+        #expect(document.sections.contains { $0.title == "我们收集的信息" })
+        #expect(document.sections.contains { $0.title == "我们如何使用信息" })
+        #expect(document.sections.contains { $0.title == "第三方服务与数据共享" })
+        #expect(document.sections.contains { $0.title == "数据存储与安全" })
+        #expect(document.sections.contains { $0.title == "你的权利与选择" })
+    }
+
+    @Test("服务条款提供标准章节而非占位文本")
+    func termsOfServiceUseStandardSections() {
+        let document = LegalDocumentContentProvider.document(for: .termsOfService)
+
+        #expect(document.title == "服务条款")
+        #expect(document.summary.contains("ClawOS"))
+        #expect(document.sections.contains { $0.title == "服务说明" })
+        #expect(document.sections.contains { $0.title == "可接受使用规则" })
+        #expect(document.sections.contains { $0.title == "用户内容与 AI 生成内容" })
+        #expect(document.sections.contains { $0.title == "免责声明与责任限制" })
+        #expect(document.sections.contains { $0.title == "条款更新与终止" })
+    }
+
     @Test("Aha 故事水平退出时会锁定主方向并抑制纵向抖动")
     func momentDismissLocksHorizontalOffset() {
         let offset = MomentDismissGestureBehavior.resolvedOffset(
@@ -511,4 +586,69 @@ struct ClawOSTests {
         #expect(axis == nil)
     }
 
+    @Test("交互返回配置只在首次启用时改写手势")
+    func interactivePopConfigRunsOnlyOnce() {
+        let recognizer = UIScreenEdgePanGestureRecognizer()
+        recognizer.isEnabled = false
+        recognizer.delegate = TestGestureDelegate()
+
+        var hasConfigured = false
+
+        InteractivePopGestureBehavior.configureIfNeeded(recognizer: recognizer, hasConfigured: &hasConfigured)
+
+        #expect(hasConfigured)
+        #expect(recognizer.isEnabled)
+        #expect(recognizer.delegate == nil)
+
+        let secondDelegate = TestGestureDelegate()
+        recognizer.delegate = secondDelegate
+
+        InteractivePopGestureBehavior.configureIfNeeded(recognizer: recognizer, hasConfigured: &hasConfigured)
+
+        #expect(recognizer.delegate === secondDelegate)
+    }
+
+    @Test("Aha 详情布局指标固定卡片高度并保留底部间距语义")
+    func momentDetailLayoutMetricsPreserveCurrentSizingRules() {
+        let containerHeight: CGFloat = 844
+        let safeBottomInset: CGFloat = 34
+
+        #expect(MomentDetailLayoutMetrics.maxCardPull(for: containerHeight) == containerHeight * 0.45)
+        #expect(MomentDetailLayoutMetrics.currentCardHeight(for: containerHeight, pullUp: 80) == containerHeight * 0.45)
+        #expect(MomentDetailLayoutMetrics.ctaBottomPadding(for: safeBottomInset) == 20)
+        #expect(MomentDetailLayoutMetrics.ctaBottomPadding(for: 10) == 16)
+        #expect(MomentDetailLayoutMetrics.ctaReservedHeight(for: safeBottomInset) == 78)
+    }
+
+    @Test("Aha 详情退场距离改由容器尺寸驱动")
+    func momentDetailLayoutMetricsUseContainerSizeForDismissTravel() {
+        let travel = MomentDetailLayoutMetrics.dismissTravel(for: CGSize(width: 390, height: 844))
+
+        #expect(travel.width == 450)
+        #expect(travel.height == 904)
+    }
+
+    @Test("Aha 详情内容卡高度固定为默认高度")
+    func momentDetailLayoutMetricsKeepCardHeightFixed() {
+        let containerHeight: CGFloat = 844
+        let defaultHeight = MomentDetailLayoutMetrics.currentCardHeight(for: containerHeight, pullUp: 0)
+        let draggedHeight = MomentDetailLayoutMetrics.currentCardHeight(for: containerHeight, pullUp: 140)
+
+        #expect(defaultHeight == containerHeight * 0.45)
+        #expect(draggedHeight == defaultHeight)
+    }
+
+    @Test("Aha 详情 CTA 使用中性玻璃样式而非主题色")
+    func momentDetailCTAStyleUsesNeutralGlass() {
+        #expect(MomentDetailCTAStyle.usesTintedGlass == false)
+    }
+
+    @Test("Aha 详情固定卡片后隐藏顶部拖拽标识")
+    func momentDetailLayoutMetricsHideTopHandleWhenCardIsFixed() {
+        #expect(MomentDetailLayoutMetrics.showsTopHandle == false)
+        #expect(MomentDetailLayoutMetrics.contentTopPadding == 20)
+    }
+
 }
+
+private final class TestGestureDelegate: NSObject, UIGestureRecognizerDelegate {}

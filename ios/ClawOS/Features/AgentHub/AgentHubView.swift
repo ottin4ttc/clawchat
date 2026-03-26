@@ -1,5 +1,22 @@
 import SwiftUI
 
+enum AgentHubHeaderChrome {
+    static let showsTitle = false
+    static let controlDiameter: CGFloat = 40
+    static let settingsUsesLiquidGlass = true
+}
+
+enum AgentHubGatewayMenuMode: Equatable {
+    case pairingOnly
+    case switcherWithAdd
+}
+
+enum AgentHubGatewayMenuBehavior {
+    static func mode(for gateways: [Gateway]) -> AgentHubGatewayMenuMode {
+        gateways.isEmpty ? .pairingOnly : .switcherWithAdd
+    }
+}
+
 struct AgentHubView: View {
     @Environment(AppState.self) private var appState
     @State private var navigateToAgentId: String?
@@ -56,22 +73,23 @@ struct AgentHubView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 12) {
             gatewayPicker
 
-            Text("Agents")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundStyle(.primary)
+            if AgentHubHeaderChrome.showsTitle {
+                Text("Agents")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundStyle(.primary)
+            }
 
             Spacer()
 
             NavigationLink {
                 SettingsView()
             } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(.primary)
+                headerControlIcon(systemName: "gearshape")
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
         .padding(.top, 16)
@@ -80,34 +98,59 @@ struct AgentHubView: View {
 
     private var gatewayPicker: some View {
         Menu {
-            ForEach(appState.gateways) { gw in
+            switch AgentHubGatewayMenuBehavior.mode(for: appState.gateways) {
+            case .pairingOnly:
                 Button {
-                    appState.selectGateway(gw.id)
+                    appState.showPairing = true
                 } label: {
-                    HStack {
-                        Label {
-                            VStack(alignment: .leading) {
-                                Text(gw.name)
-                                Text(gw.url)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                    Label("连接 Gateway", systemImage: "antenna.radiowaves.left.and.right")
+                }
+            case .switcherWithAdd:
+                ForEach(appState.gateways) { gw in
+                    Button {
+                        appState.selectGateway(gw.id)
+                    } label: {
+                        HStack {
+                            Label {
+                                VStack(alignment: .leading) {
+                                    Text(gw.name)
+                                    Text(gw.url)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: gwIcon(gw.type))
                             }
-                        } icon: {
-                            Image(systemName: gwIcon(gw.type))
-                        }
-                        if gw.id == appState.selectedGatewayId {
-                            Image(systemName: "checkmark")
+                            if gw.id == appState.selectedGatewayId {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
                 }
+
+                Divider()
+
+                Button {
+                    appState.showPairing = true
+                } label: {
+                    Label("添加 Gateway", systemImage: "plus")
+                }
             }
         } label: {
-            Image(systemName: currentGwIcon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
-                .adaptiveGlass(in: .circle)
+            headerControlIcon(systemName: currentGwIcon)
         }
+    }
+
+    private func headerControlIcon(systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(.primary)
+            .frame(
+                width: AgentHubHeaderChrome.controlDiameter,
+                height: AgentHubHeaderChrome.controlDiameter
+            )
+            .contentShape(Circle())
+            .adaptiveGlass(in: .circle, interactive: AgentHubHeaderChrome.settingsUsesLiquidGlass)
     }
 
     private var gwStatusDot: some View {

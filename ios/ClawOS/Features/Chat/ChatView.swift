@@ -1144,6 +1144,18 @@ private struct WalkieTalkieGestureView: UIViewRepresentable {
 
 // MARK: - Re-enable interactive pop gesture when back button is hidden
 
+enum InteractivePopGestureBehavior {
+    static func configureIfNeeded(
+        recognizer: UIGestureRecognizer?,
+        hasConfigured: inout Bool
+    ) {
+        guard !hasConfigured, let recognizer else { return }
+        recognizer.isEnabled = true
+        recognizer.delegate = nil
+        hasConfigured = true
+    }
+}
+
 struct InteractivePopGestureEnabler: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         InteractivePopController()
@@ -1151,10 +1163,14 @@ struct InteractivePopGestureEnabler: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 
     final class InteractivePopController: UIViewController {
-        override func viewDidLayoutSubviews() {
-            super.viewDidLayoutSubviews()
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
-            navigationController?.interactivePopGestureRecognizer?.delegate = nil
+        private var hasConfiguredInteractivePop = false
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            InteractivePopGestureBehavior.configureIfNeeded(
+                recognizer: navigationController?.interactivePopGestureRecognizer,
+                hasConfigured: &hasConfiguredInteractivePop
+            )
         }
     }
 }
