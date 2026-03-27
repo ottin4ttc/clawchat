@@ -25,6 +25,21 @@ enum AppTheme {
         static let xl: CGFloat = 24
     }
 
+    enum Chrome {
+        static let controlDiameter: CGFloat = 40
+        static let headerTopInset: CGFloat = 8
+        static let headerBottomInset: CGFloat = 4
+    }
+
+    enum EmptyState {
+        static let iconSize: CGFloat = 56
+        static let stackSpacing: CGFloat = 20
+        static let textSpacing: CGFloat = 8
+        static let frameHeightRatio: CGFloat = 0.6
+        static let contentAnchorRatio: CGFloat = 0.4
+        static let agentHubVerticalCompensation: CGFloat = 24
+    }
+
     static let sidebarWidth: CGFloat = 72
     static let avatarSize: CGFloat = 48
     static let largeAvatarSize: CGFloat = 84

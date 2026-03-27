@@ -96,15 +96,18 @@ struct SessionListView: View {
     private var emptyState: some View {
         let isSearching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return GeometryReader { geo in
-            VStack(spacing: 20) {
+            VStack(spacing: AppTheme.EmptyState.stackSpacing) {
                 if isSearching {
                     Image(systemName: "magnifyingglass")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 56, height: 56)
+                        .frame(
+                            width: AppTheme.EmptyState.iconSize,
+                            height: AppTheme.EmptyState.iconSize
+                        )
                         .foregroundStyle(Color(.systemGray4))
 
-                    VStack(spacing: 8) {
+                    VStack(spacing: AppTheme.EmptyState.textSpacing) {
                         Text("无搜索结果")
                             .font(.headline)
                             .foregroundStyle(Color(.secondaryLabel))
@@ -117,10 +120,13 @@ struct SessionListView: View {
                         .resizable()
                         .renderingMode(.template)
                         .scaledToFit()
-                        .frame(width: 56, height: 56)
+                        .frame(
+                            width: AppTheme.EmptyState.iconSize,
+                            height: AppTheme.EmptyState.iconSize
+                        )
                         .foregroundStyle(Color(.systemGray4))
 
-                    VStack(spacing: 8) {
+                    VStack(spacing: AppTheme.EmptyState.textSpacing) {
                         Text("暂无会话")
                             .font(.headline)
                             .foregroundStyle(Color(.secondaryLabel))
@@ -131,9 +137,12 @@ struct SessionListView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .position(x: geo.size.width / 2, y: geo.size.height * 0.4)
+            .position(
+                x: geo.size.width / 2,
+                y: geo.size.height * AppTheme.EmptyState.contentAnchorRatio
+            )
         }
-        .frame(height: UIScreen.main.bounds.height * 0.6)
+        .frame(height: UIScreen.main.bounds.height * AppTheme.EmptyState.frameHeightRatio)
     }
 }
 

@@ -91,7 +91,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity)
-                .frame(height: 40)
+                .frame(height: AppTheme.Chrome.controlDiameter)
                 .adaptiveGlass(in: .capsule)
                 .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)))
             }
@@ -100,7 +100,10 @@ struct HomeView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.primary)
-                    .frame(width: 40, height: 40)
+                    .frame(
+                        width: AppTheme.Chrome.controlDiameter,
+                        height: AppTheme.Chrome.controlDiameter
+                    )
                     .contentShape(Circle())
                     .adaptiveGlass(in: .circle)
                     .onTapGesture {
@@ -114,7 +117,10 @@ struct HomeView: View {
             Image(systemName: "square.and.pencil")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.primary)
-                .frame(width: 40, height: 40)
+                .frame(
+                    width: AppTheme.Chrome.controlDiameter,
+                    height: AppTheme.Chrome.controlDiameter
+                )
                 .contentShape(Circle())
                 .adaptiveGlass(in: .circle)
                 .onTapGesture {
@@ -122,8 +128,8 @@ struct HomeView: View {
                 }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, AppTheme.Chrome.headerTopInset)
+        .padding(.bottom, AppTheme.Chrome.headerBottomInset)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSearchExpanded)
         .onChange(of: isSearchExpanded) { _, expanded in
             guard expanded else { return }
@@ -178,7 +184,10 @@ struct HomeView: View {
             Image(systemName: gwTypeIcon)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.primary)
-                .frame(width: 40, height: 40)
+                .frame(
+                    width: AppTheme.Chrome.controlDiameter,
+                    height: AppTheme.Chrome.controlDiameter
+                )
                 .adaptiveGlass(in: .circle)
                 .overlay(alignment: .topTrailing) {
                     connectionDot

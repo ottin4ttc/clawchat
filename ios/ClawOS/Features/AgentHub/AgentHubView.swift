@@ -2,7 +2,6 @@ import SwiftUI
 
 enum AgentHubHeaderChrome {
     static let showsTitle = false
-    static let controlDiameter: CGFloat = 40
     static let settingsUsesLiquidGlass = true
 }
 
@@ -92,8 +91,8 @@ struct AgentHubView: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, AppTheme.Spacing.xl)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
+        .padding(.top, AppTheme.Chrome.headerTopInset)
+        .padding(.bottom, AppTheme.Chrome.headerBottomInset)
     }
 
     private var gatewayPicker: some View {
@@ -150,8 +149,8 @@ struct AgentHubView: View {
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(.primary)
             .frame(
-                width: AgentHubHeaderChrome.controlDiameter,
-                height: AgentHubHeaderChrome.controlDiameter
+                width: AppTheme.Chrome.controlDiameter,
+                height: AppTheme.Chrome.controlDiameter
             )
             .contentShape(Circle())
             .adaptiveGlass(in: .circle, interactive: AgentHubHeaderChrome.settingsUsesLiquidGlass)
@@ -238,15 +237,18 @@ struct AgentHubView: View {
 
     private var emptyState: some View {
         GeometryReader { geo in
-            VStack(spacing: 20) {
+            VStack(spacing: AppTheme.EmptyState.stackSpacing) {
                 Image("clawos_svg_logo")
                     .resizable()
                     .renderingMode(.template)
                     .scaledToFit()
-                    .frame(width: 56, height: 56)
+                    .frame(
+                        width: AppTheme.EmptyState.iconSize,
+                        height: AppTheme.EmptyState.iconSize
+                    )
                     .foregroundStyle(Color(.systemGray4))
                 
-                VStack(spacing: 8) {
+                VStack(spacing: AppTheme.EmptyState.textSpacing) {
                     Text("暂无 Agent")
                         .font(.headline)
                         .foregroundStyle(Color(.secondaryLabel))
@@ -257,8 +259,12 @@ struct AgentHubView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .position(x: geo.size.width / 2, y: geo.size.height * 0.4)
+            .position(
+                x: geo.size.width / 2,
+                y: geo.size.height * AppTheme.EmptyState.contentAnchorRatio
+                    + AppTheme.EmptyState.agentHubVerticalCompensation
+            )
         }
-        .frame(height: UIScreen.main.bounds.height * 0.6)
+        .frame(height: UIScreen.main.bounds.height * AppTheme.EmptyState.frameHeightRatio)
     }
 }
