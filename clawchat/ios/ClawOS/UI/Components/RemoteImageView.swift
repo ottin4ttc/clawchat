@@ -26,6 +26,8 @@ final class RemoteImageLoader: ObservableObject {
 
         isLoading = true
         task?.cancel()
+
+        let targetURL = self.url
         task = Task { [weak self] in
             guard let self else { return }
 
@@ -35,24 +37,27 @@ final class RemoteImageLoader: ObservableObject {
                 }
             }
 
-            do {
-                var request = URLRequest(url: self.url)
-                request.cachePolicy = .returnCacheDataElseLoad
-                request.timeoutInterval = 30
+            let decoded: UIImage? = await Task.detached(priority: .userInitiated) {
+                do {
+                    var request = URLRequest(url: targetURL)
+                    request.cachePolicy = .returnCacheDataElseLoad
+                    request.timeoutInterval = 30
 
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard !Task.isCancelled,
-                      let httpResponse = response as? HTTPURLResponse,
-                      200..<300 ~= httpResponse.statusCode,
-                      let image = UIImage(data: data) else {
-                    return
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    guard !Task.isCancelled,
+                          let httpResponse = response as? HTTPURLResponse,
+                          200..<300 ~= httpResponse.statusCode else {
+                        return nil
+                    }
+                    return UIImage(data: data)
+                } catch {
+                    return nil
                 }
+            }.value
 
-                Self.cache.setObject(image, forKey: self.url as NSURL)
-                self.image = image
-            } catch {
-                if Task.isCancelled { return }
-            }
+            guard !Task.isCancelled, let decoded else { return }
+            Self.cache.setObject(decoded, forKey: targetURL as NSURL)
+            self.image = decoded
         }
     }
 }

@@ -9,25 +9,39 @@ struct AgentAvatarView: View {
     var size: CGFloat = 28
     var showsBackground: Bool = true
 
+    @State private var diskImage: UIImage?
+
     var body: some View {
-        if let agentId, let custom = AvatarStorage.load(for: agentId) {
-            Image(uiImage: custom)
+        avatarContent
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .task(id: agentId) {
+                guard let agentId else { return }
+                if AvatarStorage.loadCached(for: agentId) != nil {
+                    diskImage = AvatarStorage.loadCached(for: agentId)
+                    return
+                }
+                if let loaded = await AvatarStorage.loadFromDisk(for: agentId) {
+                    AvatarStorage.cacheInMemory(loaded, for: agentId)
+                    diskImage = loaded
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var avatarContent: some View {
+        if let diskImage {
+            Image(uiImage: diskImage)
                 .resizable()
                 .scaledToFill()
-                .frame(width: size, height: size)
-                .clipShape(Circle())
         } else if let avatar, !avatar.isEmpty, UIImage(named: avatar) != nil {
             Image(avatar)
                 .resizable()
                 .scaledToFill()
-                .frame(width: size, height: size)
-                .clipShape(Circle())
         } else {
             Image("default_agent_avatar")
                 .resizable()
                 .scaledToFill()
-                .frame(width: size, height: size)
-                .clipShape(Circle())
         }
     }
 }

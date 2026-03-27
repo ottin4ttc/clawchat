@@ -49,6 +49,23 @@ enum AvatarStorage {
         return image
     }
 
+    static func loadCached(for agentId: String) -> UIImage? {
+        cachedImages[agentId]
+    }
+
+    static func cacheInMemory(_ image: UIImage, for agentId: String) {
+        cachedImages[agentId] = image
+    }
+
+    static func loadFromDisk(for agentId: String) async -> UIImage? {
+        let url = fileURL(for: agentId)
+        return await Task.detached(priority: .userInitiated) {
+            guard let data = try? Data(contentsOf: url),
+                  let image = UIImage(data: data) else { return nil as UIImage? }
+            return image
+        }.value
+    }
+
     static func remove(for agentId: String) {
         try? FileManager.default.removeItem(at: fileURL(for: agentId))
         cachedImages.removeValue(forKey: agentId)

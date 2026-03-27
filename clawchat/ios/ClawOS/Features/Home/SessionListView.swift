@@ -4,6 +4,12 @@ struct SessionListView: View {
     @Environment(AppState.self) private var appState
     @Binding var searchText: String
 
+    @State private var debouncedQuery = ""
+    @State private var searchDebounceTask: Task<Void, Never>?
+
+    private static let searchDebounceMilliseconds = 250
+    private static let maxMessageScanPerSession = 200
+
     private var filteredSessions: [Session] {
         let visibleAgentIds = Set(appState.selectedAgentIds)
         let gatewaySessions = appState.sessions.filter { visibleAgentIds.contains($0.agentId) }
@@ -15,7 +21,7 @@ struct SessionListView: View {
             return (s1.lastMessageTime ?? Date.distantPast) > (s2.lastMessageTime ?? Date.distantPast)
         }
 
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = debouncedQuery
         if query.isEmpty {
             return sortedSessions
         }
@@ -25,7 +31,7 @@ struct SessionListView: View {
             if agent?.name.localizedCaseInsensitiveContains(query) ?? false { return true }
             if session.lastMessage?.localizedCaseInsensitiveContains(query) ?? false { return true }
 
-            let messages = appState.messages(for: session.id)
+            let messages = appState.messages(for: session.id).suffix(Self.maxMessageScanPerSession)
             return messages.contains { $0.text.localizedCaseInsensitiveContains(query) }
         }
     }
@@ -71,6 +77,19 @@ struct SessionListView: View {
         .scrollDismissesKeyboard(.immediately)
         .navigationDestination(item: $selectedSession) { session in
             ChatView(session: session)
+        }
+        .onChange(of: searchText) { _, newText in
+            searchDebounceTask?.cancel()
+            let trimmed = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                debouncedQuery = ""
+                return
+            }
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(Self.searchDebounceMilliseconds))
+                guard !Task.isCancelled else { return }
+                debouncedQuery = trimmed
+            }
         }
     }
 

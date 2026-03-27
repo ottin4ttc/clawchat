@@ -17,11 +17,17 @@ final class AppState {
     private static let agentTokensKey = "clawos_agent_tokens"
     private static let stripPrefix = "clawos_strip_"
     private static let messagePersistenceDebounceMilliseconds = 350
+    private static let sessionPersistenceDebounceMilliseconds = 300
+    private static let stripPersistenceDebounceMilliseconds = 300
+    private static let tokenPersistenceDebounceMilliseconds = 1000
 
     var agents: [Agent] = []
     var gateways: [Gateway] = []
     var sessions: [Session] = [] {
-        didSet { persistSessions() }
+        didSet {
+            guard !isHydratingSessions else { return }
+            schedulePersistSessions()
+        }
     }
     var skills: [Skill] = []
 
@@ -33,11 +39,15 @@ final class AppState {
     )
     private var latestMessagesPersistenceRevision = 0
     private var pendingMessagePersistenceWorkItem: DispatchWorkItem?
+    private var pendingSessionPersistenceWorkItem: DispatchWorkItem?
+    private var pendingStripPersistenceWorkItem: DispatchWorkItem?
+    private var pendingTokenPersistenceWorkItem: DispatchWorkItem?
+    private var isHydratingSessions = false
 
     var selectedAgentId: String = ""
     var selectedGatewayId: String = ""
     var agentStripItems: [AgentStripItem] = [] {
-        didSet { persistStripItems() }
+        didSet { schedulePersistStripItems() }
     }
     var selectedStripItemId: String = ""
     private var preferredAgentByGroupId: [String: String] = [:]
@@ -56,6 +66,13 @@ final class AppState {
         loadSessions()
         loadMessages()
         loadTheme()
+    }
+
+    func flushAllPendingPersistence() {
+        flushPendingSessionPersistence()
+        flushPendingMessagePersistence()
+        flushPendingStripPersistence()
+        flushPendingTokenPersistence()
     }
 
     var allAvailableModels: [String] {
@@ -413,7 +430,7 @@ final class AppState {
         guard tokens > 0,
               let idx = agents.firstIndex(where: { $0.id == agentId }) else { return }
         agents[idx].totalTokens = (agents[idx].totalTokens ?? 0) + tokens
-        persistTokenUsage()
+        schedulePersistTokenUsage()
     }
 
     func deleteAgent(id: String) {
@@ -445,7 +462,7 @@ final class AppState {
                 }
             }
         }
-        persistStripItems()
+        flushPendingStripPersistence()
 
         if selectedAgentId == id {
             selectedAgentId = agents.first?.id ?? ""
@@ -507,17 +524,41 @@ final class AppState {
 
     // MARK: - Session Persistence
 
-    private func persistSessions() {
+    func flushPendingSessionPersistence() {
+        pendingSessionPersistenceWorkItem?.cancel()
+        pendingSessionPersistenceWorkItem = nil
+        persistSessionsNow()
+    }
+
+    private func schedulePersistSessions() {
+        pendingSessionPersistenceWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingSessionPersistenceWorkItem = nil
+            self.persistSessionsNow()
+        }
+        pendingSessionPersistenceWorkItem = workItem
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + .milliseconds(Self.sessionPersistenceDebounceMilliseconds),
+            execute: workItem
+        )
+    }
+
+    private func persistSessionsNow() {
         if let data = try? JSONEncoder().encode(sessions) {
             UserDefaults.standard.set(data, forKey: Self.sessionsKey)
         }
     }
 
     private func loadSessions() {
+        isHydratingSessions = true
+        defer { isHydratingSessions = false }
+
         guard let data = UserDefaults.standard.data(forKey: Self.sessionsKey),
               let saved = try? JSONDecoder().decode([Session].self, from: data) else { return }
         sessions = saved
-        persistSessions()
     }
 
     // MARK: - Message Persistence
@@ -583,7 +624,29 @@ final class AppState {
 
     // MARK: - Token Usage Persistence
 
-    private func persistTokenUsage() {
+    func flushPendingTokenPersistence() {
+        pendingTokenPersistenceWorkItem?.cancel()
+        pendingTokenPersistenceWorkItem = nil
+        persistTokenUsageNow()
+    }
+
+    private func schedulePersistTokenUsage() {
+        pendingTokenPersistenceWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingTokenPersistenceWorkItem = nil
+            self.persistTokenUsageNow()
+        }
+        pendingTokenPersistenceWorkItem = workItem
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + .milliseconds(Self.tokenPersistenceDebounceMilliseconds),
+            execute: workItem
+        )
+    }
+
+    private func persistTokenUsageNow() {
         let map = Dictionary(uniqueKeysWithValues: agents.compactMap { agent -> (String, Int)? in
             guard let tokens = agent.totalTokens, tokens > 0 else { return nil }
             return (agent.id, tokens)
@@ -601,7 +664,29 @@ final class AppState {
 
     // MARK: - Strip Persistence
 
-    private func persistStripItems() {
+    func flushPendingStripPersistence() {
+        pendingStripPersistenceWorkItem?.cancel()
+        pendingStripPersistenceWorkItem = nil
+        persistStripItemsNow()
+    }
+
+    private func schedulePersistStripItems() {
+        pendingStripPersistenceWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingStripPersistenceWorkItem = nil
+            self.persistStripItemsNow()
+        }
+        pendingStripPersistenceWorkItem = workItem
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + .milliseconds(Self.stripPersistenceDebounceMilliseconds),
+            execute: workItem
+        )
+    }
+
+    private func persistStripItemsNow() {
         guard !selectedGatewayId.isEmpty else { return }
         let key = Self.stripPrefix + selectedGatewayId
         if let data = try? JSONEncoder().encode(agentStripItems) {
