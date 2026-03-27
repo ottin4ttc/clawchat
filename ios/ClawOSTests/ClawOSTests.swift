@@ -501,7 +501,7 @@ struct ClawOSTests {
     @Test("Agent Hub 头部隐藏标题并统一 liquid glass 控件")
     func agentHubHeaderChromeUsesUnifiedGlassControls() {
         #expect(AgentHubHeaderChrome.showsTitle == false)
-        #expect(AgentHubHeaderChrome.controlDiameter == 40)
+        #expect(AppTheme.Chrome.controlDiameter == 40)
         #expect(AgentHubHeaderChrome.settingsUsesLiquidGlass)
     }
 
