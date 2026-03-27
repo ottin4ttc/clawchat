@@ -64,7 +64,7 @@ struct ConnectionCardView: View {
     @State private var showToken = false
 
     // Relay pairing fields
-    @State private var relayUrl = ""
+    @State private var relayUrl = PairingDefaults.relayUrl
     @State private var pairingCode = ""
 
     private var accent: Color {
@@ -388,6 +388,10 @@ struct ConnectionCardView: View {
             handleGatewayDeepLink(url, token)
         }
     }
+}
+
+enum PairingDefaults {
+    static let relayUrl = ""
 }
 
 // MARK: - QR Scanner Sheet

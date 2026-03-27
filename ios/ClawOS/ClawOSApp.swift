@@ -2,7 +2,10 @@ import SwiftUI
 import UIKit
 
 enum KeyboardPrewarmer {
+    static let isEnabled = false
+
     static func warmUp() {
+        guard isEnabled else { return }
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else { return }
 
