@@ -80,7 +80,7 @@ public struct GatewayConnectParams: Encodable, Sendable {
                 clientMode: GatewayProtocol.clientMode,
                 role: defaultRole,
                 scopes: defaultScopes,
-                token: token ?? deviceToken,
+                token: token ?? deviceToken ?? bootstrapToken,
                 nonce: nonce,
                 platform: "ios",
                 deviceFamily: deviceFamily
