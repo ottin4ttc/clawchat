@@ -163,10 +163,11 @@ struct ConnectionCardView: View {
                     .padding(.top, PairingSheetLayoutMetrics.headerTopPadding)
                     .padding(.bottom, PairingSheetLayoutMetrics.headerBottomPadding)
 
-                    modePicker
-                        .padding(.bottom, PairingSheetLayoutMetrics.modePickerBottomPadding)
+                    // TODO: Relay 配对暂时隐藏，目前只 focus Gateway 直连
+                    // modePicker
+                    //     .padding(.bottom, PairingSheetLayoutMetrics.modePickerBottomPadding)
 
-                    formArea
+                    gatewayForm
 
                     if let errorMessage {
                         errorBanner(errorMessage)
