@@ -4,7 +4,7 @@ import Foundation
 
 public enum GatewayProtocol {
     public static let version = 3
-    public static let clientId = "clawos-ios"
+    public static let clientId = "openclaw-ios"
     public static let clientMode = "ui"
     public static let clientVersion = "1.0.0"
     public static let controlUiClientId = "openclaw-control-ui"
