@@ -135,13 +135,14 @@ final class ClawChatManager {
 
     // MARK: - Gateway Direct Connect (native protocol)
 
-    func connectGateway(url: String, token: String) async throws {
+    func connectGateway(url: String, token: String, skipDeviceIdentity: Bool = false) async throws {
         linkState = .connecting
 
         let session = try GatewaySession(
             gatewayUrl: url,
             token: token,
-            displayName: UIDevice.current.name
+            displayName: UIDevice.current.name,
+            skipDeviceIdentity: skipDeviceIdentity
         )
 
         do {

@@ -34,6 +34,7 @@ public final class GatewaySession {
     private let token: String?
     private let deviceToken: String?
     private let displayName: String
+    private let skipDeviceIdentity: Bool
 
     private var session: URLSession
     private var webSocketTask: URLSessionWebSocketTask?
@@ -61,13 +62,15 @@ public final class GatewaySession {
         gatewayUrl: String,
         token: String? = nil,
         deviceToken: String? = nil,
-        displayName: String = "iPhone"
+        displayName: String = "iPhone",
+        skipDeviceIdentity: Bool = false
     ) throws {
         let url = gatewayUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.gatewayUrl = url
         self.token = token
         self.deviceToken = deviceToken
         self.displayName = displayName
+        self.skipDeviceIdentity = skipDeviceIdentity
         self.session = URLSession(configuration: .default)
         self.identity = try DeviceIdentity.loadOrCreate()
     }
@@ -227,17 +230,21 @@ public final class GatewaySession {
         let resolvedDeviceToken = savedDeviceToken ?? deviceToken
 
         do {
+            // When skipDeviceIdentity is true, don't send device block in connect request.
+            // This allows shared token auth to bypass device pairing entirely —
+            // gateway treats the client as a trusted operator without requiring approve.
+            let resolvedIdentity: DeviceIdentity? = skipDeviceIdentity ? nil : identity
             let params = try GatewayConnectParams.make(
                 token: resolvedToken,
                 deviceToken: resolvedDeviceToken,
                 displayName: displayName,
                 deviceFamily: "iPhone",
-                nonce: nonce,
-                identity: identity
+                nonce: skipDeviceIdentity ? nil : nonce,
+                identity: resolvedIdentity
             )
             let frame = GatewayRequestFrame(method: "connect", params: params)
             sendFrame(frame)
-            print("[GatewaySession] sent connect (device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil))")
+            print("[GatewaySession] sent connect (skipDevice=\(skipDeviceIdentity) device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil))")
         } catch {
             let authError = GatewayProtocolError.authFailed("设备签名失败：\(error.localizedDescription)")
             resumeHandshake(with: .failure(authError))

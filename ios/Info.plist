@@ -17,6 +17,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>clawchat</string>
+				<string>clawos</string>
 			</array>
 		</dict>
 	</array>

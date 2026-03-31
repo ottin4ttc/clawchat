@@ -235,11 +235,11 @@ struct ClawOSApp: App {
                 object: nil,
                 userInfo: ["relay": relay, "code": code]
             )
-        case .gateway(let gatewayUrl, let token):
+        case .gateway(let gatewayUrl, let token, let skipDevice):
             NotificationCenter.default.post(
                 name: .clawChatDeepLink,
                 object: nil,
-                userInfo: ["gatewayUrl": gatewayUrl, "gatewayToken": token]
+                userInfo: ["gatewayUrl": gatewayUrl, "gatewayToken": token, "skipDeviceIdentity": skipDevice]
             )
         }
     }

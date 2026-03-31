@@ -10,13 +10,16 @@ enum PairingDefaults {
 enum PairingDeepLink {
     enum ParsedLink {
         case relay(relay: String, code: String)
-        case gateway(url: String, token: String)
+        /// Gateway direct connection. `skipDeviceIdentity` is true for `clawos://` scheme,
+        /// which bypasses device pairing by not sending device identity in the connect request.
+        case gateway(url: String, token: String, skipDeviceIdentity: Bool)
     }
 
     static func parse(_ url: URL) -> ParsedLink? {
-        guard url.scheme == "clawchat" else { return nil }
+        guard url.scheme == "clawchat" || url.scheme == "clawos" else { return nil }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let items = components?.queryItems ?? []
+        let isClawOS = url.scheme == "clawos"
 
         switch url.host {
         case "pair":
@@ -27,7 +30,7 @@ enum PairingDeepLink {
         case "gateway":
             guard let gatewayUrl = items.first(where: { $0.name == "url" })?.value,
                   let token = items.first(where: { $0.name == "token" })?.value else { return nil }
-            return .gateway(url: gatewayUrl, token: token)
+            return .gateway(url: gatewayUrl, token: token, skipDeviceIdentity: isClawOS)
 
         default:
             return nil
@@ -109,6 +112,7 @@ struct ConnectionCardView: View {
     @State private var gatewayUrl = ""
     @State private var gatewayToken = ""
     @State private var showToken = false
+    @State private var skipDeviceIdentity = false
 
     // Relay pairing fields
     @State private var relayUrl = PairingDefaults.relayUrl
@@ -204,7 +208,8 @@ struct ConnectionCardView: View {
                     handleRelayDeepLink(relay, code)
                 } else if let url = notification.userInfo?["gatewayUrl"] as? String,
                           let token = notification.userInfo?["gatewayToken"] as? String {
-                    handleGatewayDeepLink(url, token)
+                    let skipDevice = notification.userInfo?["skipDeviceIdentity"] as? Bool ?? false
+                    handleGatewayDeepLink(url, token, skipDevice: skipDevice)
                 }
             }
         }
@@ -398,7 +403,8 @@ struct ConnectionCardView: View {
                 }
                 try await appState.clawChatManager.connectGateway(
                     url: url,
-                    token: gatewayToken.trimmingCharacters(in: .whitespacesAndNewlines)
+                    token: gatewayToken.trimmingCharacters(in: .whitespacesAndNewlines),
+                    skipDeviceIdentity: skipDeviceIdentity
                 )
 
             case .relay:
@@ -433,18 +439,23 @@ struct ConnectionCardView: View {
         Task { await startConnection() }
     }
 
-    private func handleGatewayDeepLink(_ url: String, _ token: String) {
+    private func handleGatewayDeepLink(_ url: String, _ token: String, skipDevice: Bool = false) {
         selectedMode = .direct
         gatewayUrl = url
         gatewayToken = token
+        skipDeviceIdentity = skipDevice
+        // Auto-connect when scanned from QR
+        if skipDevice {
+            Task { await startConnection() }
+        }
     }
 
     private func handleScannedLink(_ parsed: PairingDeepLink.ParsedLink) {
         switch parsed {
         case .relay(let relay, let code):
             handleRelayDeepLink(relay, code)
-        case .gateway(let url, let token):
-            handleGatewayDeepLink(url, token)
+        case .gateway(let url, let token, let skipDevice):
+            handleGatewayDeepLink(url, token, skipDevice: skipDevice)
         }
     }
 }
