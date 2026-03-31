@@ -33,8 +33,8 @@ public final class GatewaySession {
     private let gatewayUrl: String
     private let token: String?
     private let deviceToken: String?
+    private let bootstrapToken: String?
     private let displayName: String
-    private let skipDeviceIdentity: Bool
 
     private var session: URLSession
     private var webSocketTask: URLSessionWebSocketTask?
@@ -62,15 +62,15 @@ public final class GatewaySession {
         gatewayUrl: String,
         token: String? = nil,
         deviceToken: String? = nil,
-        displayName: String = "iPhone",
-        skipDeviceIdentity: Bool = false
+        bootstrapToken: String? = nil,
+        displayName: String = "iPhone"
     ) throws {
         let url = gatewayUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.gatewayUrl = url
         self.token = token
         self.deviceToken = deviceToken
+        self.bootstrapToken = bootstrapToken
         self.displayName = displayName
-        self.skipDeviceIdentity = skipDeviceIdentity
         self.session = URLSession(configuration: .default)
         self.identity = try DeviceIdentity.loadOrCreate()
     }
@@ -85,13 +85,7 @@ public final class GatewaySession {
             throw GatewayProtocolError.authFailed("Invalid URL: \(gatewayUrl)")
         }
 
-        var request = URLRequest(url: url)
-        // When using control-ui client ID (skipDeviceIdentity mode), gateway checks Origin.
-        // Use the same origin as the ClawOS web app so it's always in allowedOrigins.
-        if skipDeviceIdentity {
-            request.setValue("https://my.talentclaw.ai", forHTTPHeaderField: "Origin")
-        }
-        let task = session.webSocketTask(with: request)
+        let task = session.webSocketTask(with: url)
         self.webSocketTask = task
         task.resume()
 
@@ -234,24 +228,24 @@ public final class GatewaySession {
     private func handleChallenge(nonce: String) {
         let resolvedToken = savedDeviceToken != nil ? nil : token
         let resolvedDeviceToken = savedDeviceToken ?? deviceToken
+        // Include bootstrapToken for first-time device pairing auto-approve.
+        // Gateway sees auth.bootstrapToken + device identity → verifies bootstrap token
+        // → auto-approves device → returns hello-ok with full scopes.
+        let resolvedBootstrapToken = (savedDeviceToken == nil && deviceToken == nil) ? bootstrapToken : nil
 
         do {
-            // When skipDeviceIdentity is true, don't send device block in connect request.
-            // This allows shared token auth to bypass device pairing entirely —
-            // gateway treats the client as a trusted operator without requiring approve.
-            let resolvedIdentity: DeviceIdentity? = skipDeviceIdentity ? nil : identity
             let params = try GatewayConnectParams.make(
                 token: resolvedToken,
                 deviceToken: resolvedDeviceToken,
+                bootstrapToken: resolvedBootstrapToken,
                 displayName: displayName,
                 deviceFamily: "iPhone",
-                nonce: skipDeviceIdentity ? nil : nonce,
-                identity: resolvedIdentity,
-                useControlUiClientId: skipDeviceIdentity
+                nonce: nonce,
+                identity: identity
             )
             let frame = GatewayRequestFrame(method: "connect", params: params)
             sendFrame(frame)
-            print("[GatewaySession] sent connect (skipDevice=\(skipDeviceIdentity) device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil))")
+            print("[GatewaySession] sent connect (device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil) hasBootstrap=\(resolvedBootstrapToken != nil))")
         } catch {
             let authError = GatewayProtocolError.authFailed("设备签名失败：\(error.localizedDescription)")
             resumeHandshake(with: .failure(authError))

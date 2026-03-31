@@ -52,6 +52,7 @@ public struct GatewayConnectParams: Encodable, Sendable {
     public struct AuthInfo: Encodable, Sendable {
         public let token: String?
         public let deviceToken: String?
+        public let bootstrapToken: String?
     }
 
     public static let defaultRole = "operator"
@@ -65,19 +66,17 @@ public struct GatewayConnectParams: Encodable, Sendable {
     public static func make(
         token: String? = nil,
         deviceToken: String? = nil,
+        bootstrapToken: String? = nil,
         displayName: String? = nil,
         deviceFamily: String? = nil,
         device: DeviceBlock? = nil,
         nonce: String? = nil,
-        identity: DeviceIdentity? = nil,
-        useControlUiClientId: Bool = false
+        identity: DeviceIdentity? = nil
     ) throws -> GatewayConnectParams {
-        let clientId = useControlUiClientId ? GatewayProtocol.controlUiClientId : GatewayProtocol.clientId
-
         let resolvedDevice: DeviceBlock? = try device ?? {
             guard let identity, let nonce else { return nil }
             return try identity.signConnectRequest(
-                clientId: clientId,
+                clientId: GatewayProtocol.clientId,
                 clientMode: GatewayProtocol.clientMode,
                 role: defaultRole,
                 scopes: defaultScopes,
@@ -88,19 +87,20 @@ public struct GatewayConnectParams: Encodable, Sendable {
             )
         }()
 
+        let hasAuth = token != nil || deviceToken != nil || bootstrapToken != nil
         return GatewayConnectParams(
             minProtocol: GatewayProtocol.version,
             maxProtocol: GatewayProtocol.version,
             client: ClientInfo(
-                id: clientId,
+                id: GatewayProtocol.clientId,
                 version: GatewayProtocol.clientVersion,
                 platform: "ios",
                 mode: GatewayProtocol.clientMode,
                 displayName: displayName,
                 deviceFamily: deviceFamily
             ),
-            auth: (token != nil || deviceToken != nil)
-                ? AuthInfo(token: token, deviceToken: deviceToken)
+            auth: hasAuth
+                ? AuthInfo(token: token, deviceToken: deviceToken, bootstrapToken: bootstrapToken)
                 : nil,
             role: defaultRole,
             scopes: defaultScopes,

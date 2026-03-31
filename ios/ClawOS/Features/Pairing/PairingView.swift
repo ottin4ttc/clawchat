@@ -10,16 +10,14 @@ enum PairingDefaults {
 enum PairingDeepLink {
     enum ParsedLink {
         case relay(relay: String, code: String)
-        /// Gateway direct connection. `skipDeviceIdentity` is true for `clawos://` scheme,
-        /// which bypasses device pairing by not sending device identity in the connect request.
-        case gateway(url: String, token: String, skipDeviceIdentity: Bool)
+        /// Gateway direct connection. `bootstrapToken` enables device auto-approve on first connect.
+        case gateway(url: String, token: String, bootstrapToken: String?)
     }
 
     static func parse(_ url: URL) -> ParsedLink? {
         guard url.scheme == "clawchat" || url.scheme == "clawos" else { return nil }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let items = components?.queryItems ?? []
-        let isClawOS = url.scheme == "clawos"
 
         switch url.host {
         case "pair":
@@ -30,7 +28,8 @@ enum PairingDeepLink {
         case "gateway":
             guard let gatewayUrl = items.first(where: { $0.name == "url" })?.value,
                   let token = items.first(where: { $0.name == "token" })?.value else { return nil }
-            return .gateway(url: gatewayUrl, token: token, skipDeviceIdentity: isClawOS)
+            let bootstrapToken = items.first(where: { $0.name == "bootstrapToken" })?.value
+            return .gateway(url: gatewayUrl, token: token, bootstrapToken: bootstrapToken)
 
         default:
             return nil
@@ -112,7 +111,7 @@ struct ConnectionCardView: View {
     @State private var gatewayUrl = ""
     @State private var gatewayToken = ""
     @State private var showToken = false
-    @State private var skipDeviceIdentity = false
+    @State private var bootstrapToken: String? = nil
 
     // Relay pairing fields
     @State private var relayUrl = PairingDefaults.relayUrl
@@ -208,8 +207,8 @@ struct ConnectionCardView: View {
                     handleRelayDeepLink(relay, code)
                 } else if let url = notification.userInfo?["gatewayUrl"] as? String,
                           let token = notification.userInfo?["gatewayToken"] as? String {
-                    let skipDevice = notification.userInfo?["skipDeviceIdentity"] as? Bool ?? false
-                    handleGatewayDeepLink(url, token, skipDevice: skipDevice)
+                    let bootstrap = notification.userInfo?["bootstrapToken"] as? String
+                    handleGatewayDeepLink(url, token, bootstrap: bootstrap)
                 }
             }
         }
@@ -404,7 +403,7 @@ struct ConnectionCardView: View {
                 try await appState.clawChatManager.connectGateway(
                     url: url,
                     token: gatewayToken.trimmingCharacters(in: .whitespacesAndNewlines),
-                    skipDeviceIdentity: skipDeviceIdentity
+                    bootstrapToken: bootstrapToken
                 )
 
             case .relay:
@@ -439,13 +438,13 @@ struct ConnectionCardView: View {
         Task { await startConnection() }
     }
 
-    private func handleGatewayDeepLink(_ url: String, _ token: String, skipDevice: Bool = false) {
+    private func handleGatewayDeepLink(_ url: String, _ token: String, bootstrap: String? = nil) {
         selectedMode = .direct
         gatewayUrl = url
         gatewayToken = token
-        skipDeviceIdentity = skipDevice
-        // Auto-connect when scanned from QR
-        if skipDevice {
+        bootstrapToken = bootstrap
+        // Auto-connect when scanned from QR with bootstrap token
+        if bootstrap != nil {
             Task { await startConnection() }
         }
     }
@@ -454,8 +453,8 @@ struct ConnectionCardView: View {
         switch parsed {
         case .relay(let relay, let code):
             handleRelayDeepLink(relay, code)
-        case .gateway(let url, let token, let skipDevice):
-            handleGatewayDeepLink(url, token, skipDevice: skipDevice)
+        case .gateway(let url, let token, let bootstrap):
+            handleGatewayDeepLink(url, token, bootstrap: bootstrap)
         }
     }
 }
