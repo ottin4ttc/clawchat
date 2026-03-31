@@ -226,12 +226,15 @@ public final class GatewaySession {
     }
 
     private func handleChallenge(nonce: String) {
-        let resolvedToken = savedDeviceToken != nil ? nil : token
         let resolvedDeviceToken = savedDeviceToken ?? deviceToken
-        // Include bootstrapToken for first-time device pairing auto-approve.
-        // Gateway sees auth.bootstrapToken + device identity → verifies bootstrap token
-        // → auto-approves device → returns hello-ok with full scopes.
-        let resolvedBootstrapToken = (savedDeviceToken == nil && deviceToken == nil) ? bootstrapToken : nil
+        // When bootstrapToken is provided (first-time QR scan pairing):
+        // Send ONLY bootstrapToken + device identity, NOT auth.token.
+        // Gateway checks bootstrapToken only when authOk=false (line 201 in auth-context.ts).
+        // If we also send auth.token, it passes auth first → authOk=true → bootstrap skipped
+        // → device not auto-approved → pairing required error.
+        let hasBootstrap = bootstrapToken != nil && savedDeviceToken == nil && deviceToken == nil
+        let resolvedToken = hasBootstrap ? nil : (savedDeviceToken != nil ? nil : token)
+        let resolvedBootstrapToken = hasBootstrap ? bootstrapToken : nil
 
         do {
             let params = try GatewayConnectParams.make(
