@@ -85,7 +85,19 @@ public final class GatewaySession {
             throw GatewayProtocolError.authFailed("Invalid URL: \(gatewayUrl)")
         }
 
-        let task = session.webSocketTask(with: url)
+        var request = URLRequest(url: url)
+        // When using control-ui client ID (skipDeviceIdentity mode), gateway checks Origin.
+        // Set Origin to the tunnel's HTTPS origin so it matches allowedOrigins.
+        if skipDeviceIdentity {
+            let httpOrigin = gatewayUrl
+                .replacingOccurrences(of: "wss://", with: "https://")
+                .replacingOccurrences(of: "ws://", with: "http://")
+            if let originUrl = URL(string: httpOrigin) {
+                let origin = "\(originUrl.scheme ?? "https")://\(originUrl.host ?? "")"
+                request.setValue(origin, forHTTPHeaderField: "Origin")
+            }
+        }
+        let task = session.webSocketTask(with: request)
         self.webSocketTask = task
         task.resume()
 
