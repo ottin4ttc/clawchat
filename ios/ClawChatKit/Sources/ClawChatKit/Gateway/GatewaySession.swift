@@ -87,15 +87,9 @@ public final class GatewaySession {
 
         var request = URLRequest(url: url)
         // When using control-ui client ID (skipDeviceIdentity mode), gateway checks Origin.
-        // Set Origin to the tunnel's HTTPS origin so it matches allowedOrigins.
+        // Use the same origin as the ClawOS web app so it's always in allowedOrigins.
         if skipDeviceIdentity {
-            let httpOrigin = gatewayUrl
-                .replacingOccurrences(of: "wss://", with: "https://")
-                .replacingOccurrences(of: "ws://", with: "http://")
-            if let originUrl = URL(string: httpOrigin) {
-                let origin = "\(originUrl.scheme ?? "https")://\(originUrl.host ?? "")"
-                request.setValue(origin, forHTTPHeaderField: "Origin")
-            }
+            request.setValue("https://my.talentclaw.ai", forHTTPHeaderField: "Origin")
         }
         let task = session.webSocketTask(with: request)
         self.webSocketTask = task
