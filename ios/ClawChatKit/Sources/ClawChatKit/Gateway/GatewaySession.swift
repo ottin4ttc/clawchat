@@ -240,7 +240,8 @@ public final class GatewaySession {
                 displayName: displayName,
                 deviceFamily: "iPhone",
                 nonce: skipDeviceIdentity ? nil : nonce,
-                identity: resolvedIdentity
+                identity: resolvedIdentity,
+                useControlUiClientId: skipDeviceIdentity
             )
             let frame = GatewayRequestFrame(method: "connect", params: params)
             sendFrame(frame)

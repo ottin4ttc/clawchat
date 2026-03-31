@@ -69,12 +69,15 @@ public struct GatewayConnectParams: Encodable, Sendable {
         deviceFamily: String? = nil,
         device: DeviceBlock? = nil,
         nonce: String? = nil,
-        identity: DeviceIdentity? = nil
+        identity: DeviceIdentity? = nil,
+        useControlUiClientId: Bool = false
     ) throws -> GatewayConnectParams {
+        let clientId = useControlUiClientId ? GatewayProtocol.controlUiClientId : GatewayProtocol.clientId
+
         let resolvedDevice: DeviceBlock? = try device ?? {
             guard let identity, let nonce else { return nil }
             return try identity.signConnectRequest(
-                clientId: GatewayProtocol.clientId,
+                clientId: clientId,
                 clientMode: GatewayProtocol.clientMode,
                 role: defaultRole,
                 scopes: defaultScopes,
@@ -89,7 +92,7 @@ public struct GatewayConnectParams: Encodable, Sendable {
             minProtocol: GatewayProtocol.version,
             maxProtocol: GatewayProtocol.version,
             client: ClientInfo(
-                id: GatewayProtocol.clientId,
+                id: clientId,
                 version: GatewayProtocol.clientVersion,
                 platform: "ios",
                 mode: GatewayProtocol.clientMode,
