@@ -107,23 +107,53 @@ public struct GatewayConnectParams: Encodable, Sendable {
     }
 }
 
-// MARK: - Chat Send Params
+// MARK: - Chat Send Params (protocol: chat.send)
+
+public struct GatewayChatSendAttachment: Encodable, Sendable {
+    public let type: String?
+    public let mimeType: String?
+    public let fileName: String?
+    public let content: String?
+
+    public init(type: String? = nil, mimeType: String? = nil, fileName: String? = nil, content: String? = nil) {
+        self.type = type
+        self.mimeType = mimeType
+        self.fileName = fileName
+        self.content = content
+    }
+}
 
 public struct GatewayChatSendParams: Encodable, Sendable {
     public let sessionKey: String
     public let message: String
     public let idempotencyKey: String
+    public let thinking: String?
+    public let deliver: Bool?
+    public let attachments: [GatewayChatSendAttachment]?
+    public let timeoutMs: Int?
 
-    public init(sessionKey: String, message: String, idempotencyKey: String = UUID().uuidString) {
+    public init(
+        sessionKey: String,
+        message: String,
+        idempotencyKey: String = UUID().uuidString,
+        thinking: String? = nil,
+        deliver: Bool? = nil,
+        attachments: [GatewayChatSendAttachment]? = nil,
+        timeoutMs: Int? = nil
+    ) {
         self.sessionKey = sessionKey
         self.message = message
         self.idempotencyKey = idempotencyKey
+        self.thinking = thinking
+        self.deliver = deliver
+        self.attachments = attachments
+        self.timeoutMs = timeoutMs
     }
 }
 
 public struct GatewayChatSendResult: Decodable, Sendable {
     public let runId: String
-    public let status: String
+    public let status: String // started | in_flight | ok | error
 }
 
 public struct GatewayAgentWaitParams: Encodable, Sendable {
@@ -205,34 +235,154 @@ public struct GatewayChatHistoryParams: Encodable, Sendable {
     }
 }
 
+public struct GatewaySessionsDeleteParams: Encodable, Sendable {
+    public let key: String
+    public let deleteTranscript: Bool?
+
+    public init(key: String, deleteTranscript: Bool? = nil) {
+        self.key = key
+        self.deleteTranscript = deleteTranscript
+    }
+}
+
+// MARK: - Sessions Reset (protocol: sessions.reset)
+
+public struct GatewaySessionsResetParams: Encodable, Sendable {
+    public let key: String
+    public let reason: String?              // reset | new
+
+    public init(key: String, reason: String? = nil) {
+        self.key = key
+        self.reason = reason
+    }
+}
+
+public struct GatewaySessionsResetResult: Decodable, Sendable {
+    public let ok: Bool
+    public let key: String
+}
+
+// MARK: - Sessions Patch (protocol: sessions.patch)
+
+public struct GatewaySessionsPatchParams: Encodable, Sendable {
+    public let key: String
+    public let label: String?
+    public let model: String?
+    public let modelProvider: String?
+    public let thinkingLevel: String?
+    public let verboseLevel: String?
+
+    public init(
+        key: String,
+        label: String? = nil,
+        model: String? = nil,
+        modelProvider: String? = nil,
+        thinkingLevel: String? = nil,
+        verboseLevel: String? = nil
+    ) {
+        self.key = key
+        self.label = label
+        self.model = model
+        self.modelProvider = modelProvider
+        self.thinkingLevel = thinkingLevel
+        self.verboseLevel = verboseLevel
+    }
+}
+
+// MARK: - Sessions Compact (protocol: sessions.compact)
+
+public struct GatewaySessionsCompactParams: Encodable, Sendable {
+    public let key: String
+    public let maxLines: Int?
+
+    public init(key: String, maxLines: Int? = nil) {
+        self.key = key
+        self.maxLines = maxLines
+    }
+}
+
+// MARK: - Sessions Preview (protocol: sessions.preview)
+
+public struct GatewaySessionsPreviewParams: Encodable, Sendable {
+    public let keys: [String]
+    public let limit: Int?
+    public let maxChars: Int?
+
+    public init(keys: [String], limit: Int? = nil, maxChars: Int? = nil) {
+        self.keys = keys
+        self.limit = limit
+        self.maxChars = maxChars
+    }
+}
+
+// MARK: - Chat Abort (protocol: chat.abort)
+
+public struct GatewayChatAbortParams: Encodable, Sendable {
+    public let sessionKey: String
+    public let runId: String?
+
+    public init(sessionKey: String, runId: String? = nil) {
+        self.sessionKey = sessionKey
+        self.runId = runId
+    }
+}
+
+public struct GatewayChatAbortResult: Decodable, Sendable {
+    public let ok: Bool
+    public let aborted: Bool
+    public let runIds: [String]
+}
+
+// MARK: - Chat Inject (protocol: chat.inject)
+
+public struct GatewayChatInjectParams: Encodable, Sendable {
+    public let sessionKey: String
+    public let message: String
+    public let label: String?
+
+    public init(sessionKey: String, message: String, label: String? = nil) {
+        self.sessionKey = sessionKey
+        self.message = message
+        self.label = label
+    }
+}
+
+// MARK: - Sessions List (protocol: sessions.list)
+
 public struct GatewaySessionsListParams: Encodable, Sendable {
     public let limit: Int?
+    public let agentId: String?
+    public let includeDerivedTitles: Bool?
+    public let includeLastMessage: Bool?
+    public let search: String?
+    public let label: String?
+    public let spawnedBy: String?
     public let activeMinutes: Int?
     public let includeGlobal: Bool?
     public let includeUnknown: Bool?
-    public let includeDerivedTitles: Bool?
-    public let includeLastMessage: Bool?
-    public let agentId: String?
-    public let search: String?
 
     public init(
         limit: Int? = nil,
-        activeMinutes: Int? = nil,
-        includeGlobal: Bool? = nil,
-        includeUnknown: Bool? = nil,
+        agentId: String? = nil,
         includeDerivedTitles: Bool? = nil,
         includeLastMessage: Bool? = nil,
-        agentId: String? = nil,
-        search: String? = nil
+        search: String? = nil,
+        label: String? = nil,
+        spawnedBy: String? = nil,
+        activeMinutes: Int? = nil,
+        includeGlobal: Bool? = nil,
+        includeUnknown: Bool? = nil
     ) {
         self.limit = limit
+        self.agentId = agentId
+        self.includeDerivedTitles = includeDerivedTitles
+        self.includeLastMessage = includeLastMessage
+        self.search = search
+        self.label = label
+        self.spawnedBy = spawnedBy
         self.activeMinutes = activeMinutes
         self.includeGlobal = includeGlobal
         self.includeUnknown = includeUnknown
-        self.includeDerivedTitles = includeDerivedTitles
-        self.includeLastMessage = includeLastMessage
-        self.agentId = agentId
-        self.search = search
     }
 }
 
@@ -301,11 +451,23 @@ public struct GatewayChatEvent: Decodable, Sendable {
     }
 }
 
+// MARK: - Chat History Message (protocol: chat.history → messages[])
+
+public struct GatewayMessageProvenance: Decodable, Sendable {
+    public let kind: String?                // inter_session | external_user | internal_system
+    public let sourceSessionKey: String?
+    public let sourceChannel: String?
+    public let sourceTool: String?
+}
+
 public struct GatewayTranscriptMessage: Decodable, Sendable {
-    public let role: String
+    public let role: String                 // user | assistant | system | tool | toolResult
     public let content: [GatewayChatEvent.MessageContent.ContentBlock]?
     public let timestamp: Int64?
+    public let model: String?
     public let stopReason: String?
+    public let errorMessage: String?
+    public let provenance: GatewayMessageProvenance?
 
     public var textContent: String? {
         let text = content?
@@ -347,6 +509,122 @@ public struct GatewayHealthEvent: Decodable, Sendable {
         public let isDefault: Bool?
     }
 }
+
+// MARK: - Models List (protocol: models.list)
+
+public struct GatewayModelsListResult: Decodable, Sendable {
+    public let models: [ModelEntry]
+
+    public struct ModelEntry: Decodable, Sendable {
+        public let id: String
+        public let name: String
+        public let provider: String
+        public let contextWindow: Int?
+        public let reasoning: Bool?
+        public let input: [String]?
+    }
+}
+
+// MARK: - Agents CRUD (protocol: agents.create/update/delete)
+
+public struct GatewayAgentsCreateParams: Encodable, Sendable {
+    public let name: String
+    public let workspace: String?
+    public let model: String?
+
+    public init(name: String, workspace: String? = nil, model: String? = nil) {
+        self.name = name
+        self.workspace = workspace
+        self.model = model
+    }
+}
+
+public struct GatewayAgentsUpdateParams: Encodable, Sendable {
+    public let id: String
+    public let name: String?
+    public let workspace: String?
+    public let model: String?
+
+    public init(id: String, name: String? = nil, workspace: String? = nil, model: String? = nil) {
+        self.id = id
+        self.name = name
+        self.workspace = workspace
+        self.model = model
+    }
+}
+
+public struct GatewayAgentsDeleteParams: Encodable, Sendable {
+    public let id: String
+    public let deleteFiles: Bool?
+
+    public init(id: String, deleteFiles: Bool? = nil) {
+        self.id = id
+        self.deleteFiles = deleteFiles
+    }
+}
+
+// MARK: - Agent Files (protocol: agents.files.list/get/set)
+
+public struct GatewayAgentFilesListParams: Encodable, Sendable {
+    public let agentId: String
+
+    public init(agentId: String) {
+        self.agentId = agentId
+    }
+}
+
+public struct GatewayAgentFileItem: Decodable, Sendable {
+    public let name: String
+    public let path: String
+    public let missing: Bool
+    public let size: Int?
+    public let updatedAtMs: Int64?
+}
+
+public struct GatewayAgentFilesListResult: Decodable, Sendable {
+    public let agentId: String
+    public let workspace: String
+    public let files: [GatewayAgentFileItem]
+}
+
+public struct GatewayAgentFilesGetParams: Encodable, Sendable {
+    public let agentId: String
+    public let name: String
+
+    public init(agentId: String, name: String) {
+        self.agentId = agentId
+        self.name = name
+    }
+}
+
+public struct GatewayAgentFileGetResult: Decodable, Sendable {
+    public let agentId: String
+    public let workspace: String
+    public let file: FileWithContent
+
+    public struct FileWithContent: Decodable, Sendable {
+        public let name: String
+        public let path: String
+        public let missing: Bool
+        public let size: Int?
+        public let updatedAtMs: Int64?
+        public let content: String
+    }
+}
+
+public struct GatewayAgentFilesSetParams: Encodable, Sendable {
+    public let agentId: String
+    public let name: String
+    public let content: String
+
+    public init(agentId: String, name: String, content: String) {
+        self.agentId = agentId
+        self.name = name
+        self.content = content
+    }
+}
+
+// MARK: - Agents List (protocol: agents.list)
 
 public struct GatewayAgentsListResult: Decodable, Sendable {
     public let defaultId: String
@@ -425,12 +703,90 @@ public struct GatewaySessionsListResult: Decodable, Sendable {
         public let contextTokens: Int?
     }
 
+    public struct SessionOrigin: Decodable, Sendable {
+        public let key: String?
+        public let label: String?
+        public let channel: String?
+        public let sessionId: String?
+    }
+
+    public struct SessionDeliveryContext: Decodable, Sendable {
+        public let channel: String?
+        public let to: String?
+        public let accountId: String?
+        public let threadId: String?
+    }
+
     public struct SessionEntry: Decodable, Sendable {
+        // 核心
         public let key: String
+        public let kind: String?                        // direct | group | global | unknown
+        public let label: String?
+        public let displayName: String?
+        public let derivedTitle: String?
+        public let lastMessagePreview: String?
+        public let updatedAt: Int64?
+
+        // 渠道与来源
+        public let channel: String?
+        public let subject: String?
+        public let groupChannel: String?
+        public let space: String?
+        public let chatType: String?
+        public let origin: SessionOrigin?
+
+        // 状态
+        public let sessionId: String?
+        public let systemSent: Bool?
+        public let abortedLastRun: Bool?
+        public let sendPolicy: String?                  // allow | deny
+
+        // 模型
         public let modelProvider: String?
         public let model: String?
         public let modelOverride: String?
         public let providerOverride: String?
+        public let contextTokens: Int?
+
+        // 思考/推理级别
+        public let thinkingLevel: String?
+        public let verboseLevel: String?
+        public let reasoningLevel: String?
+        public let elevatedLevel: String?
+
+        // token 统计
+        public let inputTokens: Int?
+        public let outputTokens: Int?
+        public let totalTokens: Int?
+        public let totalTokensFresh: Bool?
+        public let responseUsage: String?               // on | off | tokens | full
+
+        // 交付上下文
+        public let deliveryContext: SessionDeliveryContext?
+        public let lastChannel: String?
+        public let lastTo: String?
+        public let lastAccountId: String?
+
+        /// 解析 session 显示标题，与 Web 端优先级一致：displayName > label > derivedTitle
+        public var displayTitle: String? {
+            for candidate in [displayName, label, derivedTitle] {
+                guard let val = candidate, !val.isEmpty else { continue }
+                // 过滤掉明显不是正常标题的值（raw metadata / JSON）
+                let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasPrefix("{") || trimmed.hasPrefix("```") || trimmed.hasPrefix("Sender (") {
+                    continue
+                }
+                return trimmed
+            }
+            return nil
+        }
+
+        /// 从 key 解析 agentId（格式 "agent:<agentId>:<rest>"）
+        public var parsedAgentId: String? {
+            let parts = key.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+            guard parts.count == 3, parts[0] == "agent" else { return nil }
+            return String(parts[1])
+        }
     }
 
     public func modelSelection(forSessionKey sessionKey: String) -> GatewaySessionModelSelection? {
@@ -470,6 +826,53 @@ public struct GatewaySessionsListResult: Decodable, Sendable {
     }
 }
 
+// MARK: - Agent Stream Event (protocol event: agent)
+
+public struct GatewayAgentStreamEvent: Decodable, Sendable {
+    public let stream: String?              // assistant | lifecycle | tool
+    public let data: [String: AnyCodable]?
+
+    /// 简化包装，只提取 JSON 原始值
+    public struct AnyCodable: Decodable, Sendable {
+        public let value: Any?
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let s = try? container.decode(String.self) { value = s }
+            else if let i = try? container.decode(Int.self) { value = i }
+            else if let d = try? container.decode(Double.self) { value = d }
+            else if let b = try? container.decode(Bool.self) { value = b }
+            else { value = nil }
+        }
+    }
+}
+
+// MARK: - Presence Event (protocol event: presence)
+
+public struct GatewayPresenceEvent: Decodable, Sendable {
+    public let status: String?              // online | offline
+    public let agentId: String?
+}
+
+// MARK: - Cron Event (protocol event: cron)
+
+public struct GatewayCronEvent: Decodable, Sendable {
+    public let jobId: String
+    public let action: String               // added | updated | removed | started | finished
+    public let status: String?              // ok | error | skipped
+    public let error: String?
+    public let summary: String?
+    public let sessionKey: String?
+    public let durationMs: Int?
+    public let nextRunAtMs: Int64?
+}
+
+// MARK: - Shutdown Event (protocol event: shutdown)
+
+public struct GatewayShutdownEvent: Decodable, Sendable {
+    public let reason: String?
+}
+
 // MARK: - Decoded Gateway Message
 
 public enum GatewayMessage: Sendable {
@@ -479,6 +882,10 @@ public enum GatewayMessage: Sendable {
     case responseError(id: String, error: GatewayErrorPayload)
     case chatEvent(GatewayChatEvent)
     case healthEvent(GatewayHealthEvent)
+    case agentStreamEvent(GatewayAgentStreamEvent)
+    case presenceEvent(GatewayPresenceEvent)
+    case cronEvent(GatewayCronEvent)
+    case shutdownEvent(GatewayShutdownEvent)
     case tick
     case unknown(Data)
 
@@ -527,6 +934,38 @@ public enum GatewayMessage: Sendable {
                 return .unknown(raw)
             }
             return .healthEvent(health)
+
+        case "agent":
+            guard let payload = json["payload"],
+                  let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+                  let event = try? JSONDecoder().decode(GatewayAgentStreamEvent.self, from: payloadData) else {
+                return .unknown(raw)
+            }
+            return .agentStreamEvent(event)
+
+        case "presence":
+            guard let payload = json["payload"],
+                  let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+                  let event = try? JSONDecoder().decode(GatewayPresenceEvent.self, from: payloadData) else {
+                return .unknown(raw)
+            }
+            return .presenceEvent(event)
+
+        case "cron":
+            guard let payload = json["payload"],
+                  let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+                  let event = try? JSONDecoder().decode(GatewayCronEvent.self, from: payloadData) else {
+                return .unknown(raw)
+            }
+            return .cronEvent(event)
+
+        case "shutdown":
+            guard let payload = json["payload"],
+                  let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+                  let event = try? JSONDecoder().decode(GatewayShutdownEvent.self, from: payloadData) else {
+                return .unknown(raw)
+            }
+            return .shutdownEvent(event)
 
         default:
             return .unknown(raw)

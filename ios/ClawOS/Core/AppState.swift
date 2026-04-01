@@ -370,6 +370,53 @@ final class AppState {
         loadStripItems()
     }
 
+    // MARK: - Merge Gateway Session History
+
+    func mergeGatewaySessions(_ entries: [GatewaySessionsListResult.SessionEntry]) {
+        let knownAgentIds = Set(agents.map(\.id))
+        let fallbackAgentId = selectedAgentId.isEmpty ? agents.first?.id : selectedAgentId
+
+        var merged = sessions
+
+        for entry in entries {
+            let agentId = entry.parsedAgentId ?? fallbackAgentId
+            guard let agentId, knownAgentIds.contains(agentId) else { continue }
+
+            if let localIdx = merged.firstIndex(where: { $0.sessionKey == entry.key }) {
+                // 更新已有 session 的标题和最后消息
+                if let title = entry.displayTitle, !title.isEmpty {
+                    merged[localIdx].title = title
+                }
+                if let preview = entry.lastMessagePreview, !preview.isEmpty {
+                    merged[localIdx].lastMessage = preview
+                }
+                if let updatedAt = entry.updatedAt {
+                    let remoteDate = Date(timeIntervalSince1970: TimeInterval(updatedAt) / 1000)
+                    if merged[localIdx].lastMessageTime == nil || remoteDate > merged[localIdx].lastMessageTime! {
+                        merged[localIdx].lastMessageTime = remoteDate
+                    }
+                }
+            } else {
+                // 本地不存在，从网关创建
+                let title = entry.displayTitle ?? "对话"
+                let lastTime: Date? = entry.updatedAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) }
+                let session = Session(
+                    id: UUID().uuidString,
+                    agentId: agentId,
+                    sessionKey: entry.key,
+                    title: title,
+                    category: "对话",
+                    lastMessage: entry.lastMessagePreview,
+                    lastMessageTime: lastTime,
+                    unreadCount: 0
+                )
+                merged.append(session)
+            }
+        }
+
+        sessions = merged
+    }
+
     func createSession(for agentId: String, title: String = "新对话") -> Session {
         let session = Session(
             id: UUID().uuidString,
@@ -404,10 +451,18 @@ final class AppState {
     }
 
     func deleteSession(id: String) {
+        let sessionKey = sessions.first { $0.id == id }?.sessionKey
         sessions.removeAll { $0.id == id }
         messagesBySession.removeValue(forKey: id)
         chatScrollAnchorsBySession.removeValue(forKey: id)
         schedulePersistMessages()
+
+        // 同步删除网关 session
+        if let key = sessionKey {
+            Task {
+                await clawChatManager.gatewaySession?.deleteSession(key: key)
+            }
+        }
     }
 
     func togglePinSession(id: String) {

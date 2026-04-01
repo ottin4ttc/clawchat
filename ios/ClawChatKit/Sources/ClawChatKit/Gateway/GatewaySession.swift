@@ -21,6 +21,7 @@ public final class GatewaySession {
     public var onAgentsCatalogLoaded: ((GatewayAgentsListResult) -> Void)?
     public var onSessionModelResolved: ((GatewaySessionModelSelection, String) -> Void)?
     public var onTokenUsageReported: ((GatewayTokenUsage, String) -> Void)?
+    public var onSessionHistoryLoaded: (([GatewaySessionsListResult.SessionEntry]) -> Void)?
 
     // MARK: - Connection result
 
@@ -272,6 +273,7 @@ public final class GatewaySession {
 
         Task { [weak self] in
             await self?.refreshAgentsCatalog()
+            await self?.fetchSessionHistory()
         }
 
         print("[GatewaySession] connected, protocol=\(helloOk.protocol), server=\(helloOk.server?.version ?? "?")")
@@ -404,6 +406,18 @@ public final class GatewaySession {
 
         case .responseOk(let id, let payload):
             resolvePendingResponseOK(id: id, payload: payload)
+
+        case .agentStreamEvent:
+            break
+
+        case .presenceEvent:
+            break
+
+        case .cronEvent:
+            break
+
+        case .shutdownEvent:
+            break
 
         case .tick:
             break
@@ -538,6 +552,109 @@ public final class GatewaySession {
     }
 
     @MainActor
+    private func fetchSessionHistory() async {
+        do {
+            let result: GatewaySessionsListResult = try await request(
+                method: "sessions.list",
+                params: GatewaySessionsListParams(
+                    limit: 50,
+                    includeDerivedTitles: true,
+                    includeLastMessage: true,
+                    includeGlobal: false,
+                    includeUnknown: false
+                ),
+                as: GatewaySessionsListResult.self
+            )
+            let sessions = result.sessions.filter { $0.kind != "global" }
+            if !sessions.isEmpty {
+                onSessionHistoryLoaded?(sessions)
+            }
+        } catch {
+            print("[GatewaySession] fetchSessionHistory failed: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Agents CRUD
+
+    @MainActor
+    public func createAgent(name: String, model: String? = nil) async {
+        do {
+            let _: Data = try await request(
+                method: "agents.create",
+                params: GatewayAgentsCreateParams(name: name, model: model)
+            )
+            print("[GatewaySession] agent created: \(name)")
+        } catch {
+            print("[GatewaySession] agents.create failed: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    public func updateAgent(id: String, name: String? = nil, model: String? = nil) async {
+        do {
+            let _: Data = try await request(
+                method: "agents.update",
+                params: GatewayAgentsUpdateParams(id: id, name: name, model: model)
+            )
+            print("[GatewaySession] agent updated: \(id)")
+        } catch {
+            print("[GatewaySession] agents.update failed: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    public func deleteAgent(id: String) async {
+        do {
+            let _: Data = try await request(
+                method: "agents.delete",
+                params: GatewayAgentsDeleteParams(id: id)
+            )
+            print("[GatewaySession] agent deleted: \(id)")
+        } catch {
+            print("[GatewaySession] agents.delete failed: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    public func fetchAgentsCatalog() async throws -> GatewayAgentsListResult {
+        try await request(
+            method: "agents.list",
+            params: GatewayEmptyParams(),
+            as: GatewayAgentsListResult.self
+        )
+    }
+
+    // MARK: - Sessions
+
+    @MainActor
+    public func deleteSession(key: String) async {
+        do {
+            let _: Data = try await request(
+                method: "sessions.delete",
+                params: GatewaySessionsDeleteParams(key: key)
+            )
+            print("[GatewaySession] session deleted: \(key)")
+        } catch {
+            print("[GatewaySession] sessions.delete failed: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    public func fetchChatHistory(sessionKey: String, limit: Int = 50) async -> [GatewayTranscriptMessage] {
+        do {
+            let result: GatewayChatHistoryResult = try await request(
+                method: "chat.history",
+                params: GatewayChatHistoryParams(sessionKey: sessionKey, limit: limit),
+                as: GatewayChatHistoryResult.self
+            )
+            return result.messages
+        } catch {
+            print("[GatewaySession] chat.history failed: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    @MainActor
     public func refreshSessionModel(sessionKey: String? = nil, agentId: String? = nil) async {
         let resolvedSessionKey = sessionKey ?? defaultSessionKey
         let resolvedAgentId = agentId ?? defaultAgentId
@@ -546,9 +663,9 @@ public final class GatewaySession {
             let result: GatewaySessionsListResult = try await request(
                 method: "sessions.list",
                 params: GatewaySessionsListParams(
+                    agentId: resolvedAgentId,
                     includeGlobal: false,
-                    includeUnknown: false,
-                    agentId: resolvedAgentId
+                    includeUnknown: false
                 ),
                 as: GatewaySessionsListResult.self
             )

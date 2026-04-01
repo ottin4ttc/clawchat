@@ -464,6 +464,13 @@ final class ClawChatManager {
                 self?.appState?.addTokenUsage(agentId: agentId, tokens: usage.totalTokens)
             }
         }
+
+        session.onSessionHistoryLoaded = { [weak self] entries in
+            Task { @MainActor [weak self] in
+                self?.appState?.mergeGatewaySessions(entries)
+                print("[ClawChatManager] session history loaded: \(entries.count) sessions")
+            }
+        }
     }
 
     // MARK: - Relay Presence & Reconnect

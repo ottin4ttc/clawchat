@@ -564,18 +564,37 @@ struct SessionRowView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color(.label))
                     .lineLimit(1)
-                
+
                 Spacer()
-                
+
+                Text(session.timeAgo)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(.tertiaryLabel))
+
                 if session.isPinned {
                     Image(systemName: "pin.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 10))
                         .foregroundStyle(Color(.tertiaryLabel))
                         .rotationEffect(.degrees(45))
                 }
-                
+            }
+
+            HStack {
+                if let preview = session.lastMessage, !preview.isEmpty {
+                    Text(preview)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .lineLimit(1)
+                } else {
+                    Text("暂无消息")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                }
+
+                Spacer()
+
                 if session.unreadCount > 0 {
-                    Text("\(session.unreadCount)")
+                    Text("\(String(session.unreadCount))")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
@@ -583,10 +602,6 @@ struct SessionRowView: View {
                         .background(theme.accent, in: Capsule())
                 }
             }
-            
-            Text(session.timeAgo)
-                .font(.system(size: 13))
-                .foregroundStyle(Color(.secondaryLabel))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

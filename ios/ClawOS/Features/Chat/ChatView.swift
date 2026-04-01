@@ -177,6 +177,12 @@ struct ChatView: View {
                 try? await Task.sleep(for: .seconds(1.5))
                 await speechService.prepareFastStartIfAuthorized()
             }
+            // 本地无消息时从网关加载历史
+            if storedMessages.isEmpty {
+                Task {
+                    await loadHistoryFromGateway()
+                }
+            }
         }
         .onChange(of: agent?.id) { _, _ in
             syncSelectedModel()
@@ -959,6 +965,28 @@ struct ChatView: View {
             speechPermissionMessage = error.localizedDescription
             showSpeechPermissionAlert = true
         }
+    }
+
+    private func loadHistoryFromGateway() async {
+        guard let gw = chatManager.gatewaySession else { return }
+        let messages = await gw.fetchChatHistory(sessionKey: session.sessionKey)
+        guard !messages.isEmpty else { return }
+
+        for msg in messages {
+            guard let text = msg.textContent else { continue }
+            let role: StoredMessage.StoredMessageRole = msg.role == "user" ? .user : .assistant
+            let timestamp: Date = msg.timestamp.map {
+                Date(timeIntervalSince1970: TimeInterval($0) / 1000)
+            } ?? Date()
+            let stored = StoredMessage(
+                id: UUID().uuidString,
+                role: role,
+                text: text,
+                timestamp: timestamp
+            )
+            appState.appendMessage(to: session.id, message: stored)
+        }
+        refreshMessageSnapshot(forceScrollToBottom: true, animated: false)
     }
 
     private func syncSelectedModel() {

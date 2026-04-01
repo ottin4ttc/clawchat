@@ -264,7 +264,7 @@ struct AgentTrackView: View {
     
     private var addButton: some View {
         Button {
-            // showAddAgent = true
+            showAddAgent = true
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 18, weight: .semibold))

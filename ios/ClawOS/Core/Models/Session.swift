@@ -78,10 +78,23 @@ struct Session: Identifiable, Codable, Hashable {
     var timeAgo: String {
         guard let time = lastMessageTime else { return "" }
         let interval = Date().timeIntervalSince(time)
+        let minutes = Int(interval / 60)
+        let hours = Int(interval / 3600)
         let days = Int(interval / 86400)
-        if days == 0 { return "今天" }
+
+        if minutes < 1 { return "刚刚" }
+        if minutes < 60 { return "\(String(minutes))分钟前" }
+        if hours < 24 { return "\(String(hours))小时前" }
         if days == 1 { return "昨天" }
-        return "\(days)天"
+        if days < 7 { return "\(String(days))天前" }
+
+        let formatter = DateFormatter()
+        if days < 365 {
+            formatter.dateFormat = "M/d"
+        } else {
+            formatter.dateFormat = "yyyy/M/d"
+        }
+        return formatter.string(from: time)
     }
 }
 
