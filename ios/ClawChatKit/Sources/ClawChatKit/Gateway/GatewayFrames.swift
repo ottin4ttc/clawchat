@@ -52,7 +52,6 @@ public struct GatewayConnectParams: Encodable, Sendable {
     public struct AuthInfo: Encodable, Sendable {
         public let token: String?
         public let deviceToken: String?
-        public let bootstrapToken: String?
     }
 
     public static let defaultRole = "operator"
@@ -66,7 +65,6 @@ public struct GatewayConnectParams: Encodable, Sendable {
     public static func make(
         token: String? = nil,
         deviceToken: String? = nil,
-        bootstrapToken: String? = nil,
         displayName: String? = nil,
         deviceFamily: String? = nil,
         device: DeviceBlock? = nil,
@@ -80,14 +78,14 @@ public struct GatewayConnectParams: Encodable, Sendable {
                 clientMode: GatewayProtocol.clientMode,
                 role: defaultRole,
                 scopes: defaultScopes,
-                token: token ?? deviceToken ?? bootstrapToken,
+                token: token ?? deviceToken,
                 nonce: nonce,
                 platform: "ios",
                 deviceFamily: deviceFamily
             )
         }()
 
-        let hasAuth = token != nil || deviceToken != nil || bootstrapToken != nil
+        let hasAuth = token != nil || deviceToken != nil
         return GatewayConnectParams(
             minProtocol: GatewayProtocol.version,
             maxProtocol: GatewayProtocol.version,
@@ -100,7 +98,7 @@ public struct GatewayConnectParams: Encodable, Sendable {
                 deviceFamily: deviceFamily
             ),
             auth: hasAuth
-                ? AuthInfo(token: token, deviceToken: deviceToken, bootstrapToken: bootstrapToken)
+                ? AuthInfo(token: token, deviceToken: deviceToken)
                 : nil,
             role: defaultRole,
             scopes: defaultScopes,

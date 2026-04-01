@@ -33,7 +33,6 @@ public final class GatewaySession {
     private let gatewayUrl: String
     private let token: String?
     private let deviceToken: String?
-    private let bootstrapToken: String?
     private let displayName: String
 
     private var session: URLSession
@@ -62,17 +61,23 @@ public final class GatewaySession {
         gatewayUrl: String,
         token: String? = nil,
         deviceToken: String? = nil,
-        bootstrapToken: String? = nil,
-        displayName: String = "iPhone"
+        displayName: String = "iPhone",
+        privateKeyBase64Url: String? = nil
     ) throws {
         let url = gatewayUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         self.gatewayUrl = url
         self.token = token
         self.deviceToken = deviceToken
-        self.bootstrapToken = bootstrapToken
         self.displayName = displayName
         self.session = URLSession(configuration: .default)
-        self.identity = try DeviceIdentity.loadOrCreate()
+        // If a pre-approved private key is provided (from QR scan), use it as device identity.
+        // Otherwise use the device's own Keychain-persisted identity.
+        if let pkB64 = privateKeyBase64Url,
+           let rawData = DeviceIdentity.base64UrlDecode(pkB64) {
+            self.identity = try DeviceIdentity(rawRepresentation: rawData)
+        } else {
+            self.identity = try DeviceIdentity.loadOrCreate()
+        }
     }
 
     // MARK: - Lifecycle
@@ -226,21 +231,13 @@ public final class GatewaySession {
     }
 
     private func handleChallenge(nonce: String) {
+        let resolvedToken = savedDeviceToken != nil ? nil : token
         let resolvedDeviceToken = savedDeviceToken ?? deviceToken
-        // When bootstrapToken is provided (first-time QR scan pairing):
-        // Send ONLY bootstrapToken + device identity, NOT auth.token.
-        // Gateway checks bootstrapToken only when authOk=false (line 201 in auth-context.ts).
-        // If we also send auth.token, it passes auth first → authOk=true → bootstrap skipped
-        // → device not auto-approved → pairing required error.
-        let hasBootstrap = bootstrapToken != nil && savedDeviceToken == nil && deviceToken == nil
-        let resolvedToken = hasBootstrap ? nil : (savedDeviceToken != nil ? nil : token)
-        let resolvedBootstrapToken = hasBootstrap ? bootstrapToken : nil
 
         do {
             let params = try GatewayConnectParams.make(
                 token: resolvedToken,
                 deviceToken: resolvedDeviceToken,
-                bootstrapToken: resolvedBootstrapToken,
                 displayName: displayName,
                 deviceFamily: "iPhone",
                 nonce: nonce,
@@ -248,7 +245,7 @@ public final class GatewaySession {
             )
             let frame = GatewayRequestFrame(method: "connect", params: params)
             sendFrame(frame)
-            print("[GatewaySession] sent connect (device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil) hasBootstrap=\(resolvedBootstrapToken != nil))")
+            print("[GatewaySession] sent connect (device=\(identity.deviceId.prefix(12))… useDeviceToken=\(savedDeviceToken != nil))")
         } catch {
             let authError = GatewayProtocolError.authFailed("设备签名失败：\(error.localizedDescription)")
             resumeHandshake(with: .failure(authError))

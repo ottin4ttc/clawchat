@@ -148,6 +148,15 @@ public struct DeviceIdentity: Sendable {
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
     }
+
+    /// Decode a base64url string to Data.
+    public static func base64UrlDecode(_ string: String) -> Data? {
+        var b64 = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64.append("=") }
+        return Data(base64Encoded: b64)
+    }
 }
 
 // MARK: - Device Block (for connect request)

@@ -10,8 +10,9 @@ enum PairingDefaults {
 enum PairingDeepLink {
     enum ParsedLink {
         case relay(relay: String, code: String)
-        /// Gateway direct connection. `bootstrapToken` enables device auto-approve on first connect.
-        case gateway(url: String, token: String, bootstrapToken: String?)
+        /// Gateway direct connection. `privateKey` is a base64url-encoded Ed25519 private key
+        /// for a pre-approved device (desktop wrote it to paired.json).
+        case gateway(url: String, token: String, privateKey: String?)
     }
 
     static func parse(_ url: URL) -> ParsedLink? {
@@ -28,8 +29,8 @@ enum PairingDeepLink {
         case "gateway":
             guard let gatewayUrl = items.first(where: { $0.name == "url" })?.value,
                   let token = items.first(where: { $0.name == "token" })?.value else { return nil }
-            let bootstrapToken = items.first(where: { $0.name == "bootstrapToken" })?.value
-            return .gateway(url: gatewayUrl, token: token, bootstrapToken: bootstrapToken)
+            let privateKey = items.first(where: { $0.name == "pk" })?.value
+            return .gateway(url: gatewayUrl, token: token, privateKey: privateKey)
 
         default:
             return nil
@@ -111,7 +112,7 @@ struct ConnectionCardView: View {
     @State private var gatewayUrl = ""
     @State private var gatewayToken = ""
     @State private var showToken = false
-    @State private var bootstrapToken: String? = nil
+    @State private var privateKeyBase64Url: String? = nil
 
     // Relay pairing fields
     @State private var relayUrl = PairingDefaults.relayUrl
@@ -208,8 +209,8 @@ struct ConnectionCardView: View {
                     handleRelayDeepLink(relay, code)
                 } else if let url = notification.userInfo?["gatewayUrl"] as? String,
                           let token = notification.userInfo?["gatewayToken"] as? String {
-                    let bootstrap = notification.userInfo?["bootstrapToken"] as? String
-                    handleGatewayDeepLink(url, token, bootstrap: bootstrap)
+                    let pk = notification.userInfo?["privateKey"] as? String
+                    handleGatewayDeepLink(url, token, pk: pk)
                 }
             }
         }
@@ -404,7 +405,7 @@ struct ConnectionCardView: View {
                 try await appState.clawChatManager.connectGateway(
                     url: url,
                     token: gatewayToken.trimmingCharacters(in: .whitespacesAndNewlines),
-                    bootstrapToken: bootstrapToken
+                    privateKeyBase64Url: privateKeyBase64Url
                 )
 
             case .relay:
@@ -439,13 +440,13 @@ struct ConnectionCardView: View {
         Task { await startConnection() }
     }
 
-    private func handleGatewayDeepLink(_ url: String, _ token: String, bootstrap: String? = nil) {
+    private func handleGatewayDeepLink(_ url: String, _ token: String, pk: String? = nil) {
         selectedMode = .direct
         gatewayUrl = url
         gatewayToken = token
-        bootstrapToken = bootstrap
-        // Auto-connect when scanned from QR with bootstrap token
-        if bootstrap != nil {
+        privateKeyBase64Url = pk
+        // Auto-connect when scanned from QR with pre-approved private key
+        if pk != nil {
             Task { await startConnection() }
         }
     }
@@ -454,8 +455,8 @@ struct ConnectionCardView: View {
         switch parsed {
         case .relay(let relay, let code):
             handleRelayDeepLink(relay, code)
-        case .gateway(let url, let token, let bootstrap):
-            handleGatewayDeepLink(url, token, bootstrap: bootstrap)
+        case .gateway(let url, let token, let pk):
+            handleGatewayDeepLink(url, token, pk: pk)
         }
     }
 }
