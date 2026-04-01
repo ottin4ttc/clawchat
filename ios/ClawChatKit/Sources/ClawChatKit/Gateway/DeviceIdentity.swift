@@ -57,6 +57,14 @@ public struct DeviceIdentity: Sendable {
         self.init(privateKey: privateKey)
     }
 
+    /// Import an external private key and persist it to Keychain.
+    /// Used when scanning a QR code with a pre-approved device key.
+    public static func importAndPersist(rawRepresentation: Data, keychain: KeychainStore = KeychainStore()) throws -> DeviceIdentity {
+        let identity = try DeviceIdentity(rawRepresentation: rawRepresentation)
+        try keychain.save(key: keychainKey, value: rawRepresentation.base64EncodedString())
+        return identity
+    }
+
     // MARK: - Sign Connect Request
 
     /// Build the `device` block for a Gateway connect request.

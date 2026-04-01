@@ -70,11 +70,11 @@ public final class GatewaySession {
         self.deviceToken = deviceToken
         self.displayName = displayName
         self.session = URLSession(configuration: .default)
-        // If a pre-approved private key is provided (from QR scan), use it as device identity.
-        // Otherwise use the device's own Keychain-persisted identity.
+        // If a pre-approved private key is provided (from QR scan), import it and
+        // persist to Keychain so subsequent app launches reuse the same approved identity.
         if let pkB64 = privateKeyBase64Url,
            let rawData = DeviceIdentity.base64UrlDecode(pkB64) {
-            self.identity = try DeviceIdentity(rawRepresentation: rawData)
+            self.identity = try DeviceIdentity.importAndPersist(rawRepresentation: rawData)
         } else {
             self.identity = try DeviceIdentity.loadOrCreate()
         }
